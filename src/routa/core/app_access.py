@@ -17,10 +17,17 @@ from routa.core.db import DB_PATH
 
 # Реестр приложений платформы. id — технический ключ, используется в URL/API.
 KNOWN_APPS: dict[str, dict] = {
+    "counta": {
+        "id": "counta",
+        "name": "Counta",
+        "icon": "🪙",
+        "public": True,
+        "url": "https://counta.avalone.online",
+    },
     "routa": {
         "id": "routa",
         "name": "Routa",
-        "icon": "🪙",
+        "icon": "🚐",
         "public": True,
         "url": "https://routa.avalone.online",
     },
