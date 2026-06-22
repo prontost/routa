@@ -157,24 +157,11 @@ select,input[type=number],input[type=text],input[type=password],input[type=email
   <div id="install-ios-hint" class="small" style="display:none;margin-top:6px;color:var(--muted)" data-i="install_ios_hint">Нажмите «Поделиться» → «На экран Home»</div>
 </div>
 
-<!-- ПОДСКАЗКА: быстрый доступ к мастеру начала работы -->
-<div class="card" style="margin:12px 16px 0;padding:10px 14px">
-  <div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:nowrap">
-    <span style="font-size:18px">💡</span>
-    <button class="btn btn-primary" onclick="startWizard()" data-i="hint" style="padding:6px 12px;font-size:14px;white-space:nowrap">Открыть</button>
-  </div>
+<div class="card" style="margin:12px 16px 0;padding:18px 14px;text-align:center">
+  <div style="font-size:42px;margin-bottom:10px">🚐</div>
+  <h2 style="margin:0 0 8px;font-size:18px">Routa</h2>
+  <p class="small" style="color:var(--muted);margin:0" data-i="routa_coming">Управление поездками людей на работу.<br>Приложение в разработке.</p>
 </div>
-
-<div id="widgets">
-  <div class="card" id="w-balances">
-    <b data-i="balances">💰 Остатки</b>
-    <div id="mini-balances" style="margin-top:8px">…</div>
-  </div>
-  <div class="card" id="w-journal">
-    <b data-i="last_ops">🧾 Последние операции</b>
-    <div id="mini-journal" style="margin-top:8px">…</div>
-  </div>
-</div><!-- /widgets -->
 </div><!-- /page-entry -->
 
 
@@ -444,51 +431,15 @@ select,input[type=number],input[type=text],input[type=password],input[type=email
 <!-- АНАЛИТИКА -->
 <div id="page-ai" class="hidden" style="padding-bottom:130px">
   <h1 data-i="scr_ai">📊 Аналитика</h1>
-
-  <!-- ОТЧЁТ: детерминированный — доход/расход/итог + топ категорий + графики -->
-  <div class="card">
-    <div class="row" style="gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-      <label class="small" data-i="rep_view">Вид:</label>
-      <select id="report-view" onchange="setReportView(this.value)" style="flex:1;min-width:140px">
-        <option value="overview" data-i="rep_view_overview">Обзор</option>
-        <option value="donut" data-i="rep_view_donut">Расходы по категориям</option>
-        <option value="trend" data-i="rep_view_trend">Динамика</option>
-        <option value="compare" data-i="rep_view_compare">Сравнение периодов</option>
-      </select>
-    </div>
-    <div class="row" id="rep-periods" style="gap:6px;flex-wrap:wrap;margin-bottom:4px"></div>
-
-    <!-- ИНСАЙТ: персонализированный совет по выбранному периоду -->
-    <div class="card" id="insight-card" style="display:none;border-left:4px solid var(--accent);margin:12px 0">
-      <div class="small" style="opacity:.7;margin-bottom:4px" data-i="ins_title">💡 Инсайт</div>
-      <div id="ins-title" style="font-weight:600"></div>
-      <div id="ins-body" class="small" style="margin:4px 0"></div>
-      <div id="ins-book" class="small" style="opacity:.7"></div>
-    </div>
-
-    <div id="report"></div>
+  <div class="card" style="text-align:center;padding:30px 14px">
+    <div style="font-size:42px;margin-bottom:10px">📊</div>
+    <p class="small" style="color:var(--muted);margin:0" data-i="routa_ai_coming">Аналитика поездок появится позже.</p>
   </div>
-
-  <!-- БИБЛИОТЕКА СОВЕТОВ ПО ФИНАНСОВОЙ ГРАМОТНОСТИ -->
-  <details class="acc" id="acc-tips">
-    <summary data-i="sec_tips">📚 Остальные советы по финансовой грамотности</summary>
-    <div class="acc-body" id="tips-library"></div>
-  </details>
 </div>
 
 <!-- ЕЩЁ: уведомления + настройки -->
 <div id="page-more" class="hidden">
   <h1 data-i="scr_more">☰ Ещё</h1>
-
-  <!-- ПЕРЕКЛЮЧАТЕЛЬ ПРИЛОЖЕНИЙ — каркас платформы -->
-  <div class="card" id="app-switcher-card">
-    <div class="row" style="align-items:center;gap:10px;flex-wrap:wrap">
-      <label class="small" style="opacity:.7;flex:1" data-i="app_select">Приложение</label>
-      <select id="app-select" onchange="switchApp(this.value)" style="flex:2;min-width:140px">
-        <option value="routa" data-i="app_routa">Routa</option>
-      </select>
-    </div>
-  </div>
 
   <details class="acc" id="acc-account">
     <summary data-i="sec_account">👤 Аккаунт</summary>
@@ -1017,56 +968,16 @@ function go(page){
    Показывается автоматически новому юзеру (нет счетов) один раз; повторно — из
    бургера «Справка». Флаг «видел» хранится в localStorage. */
 // шаги мастера: ключи title|body в I18N как wzN_t / wzN_b. Порядок:
-// приветствие → завести счёт → пополнить (отразить реальность) → долговой счёт
-// (расход без пополнения = минус = долг) → записать операцию → смотреть остатки.
-const WZ_STEPS = ['wz1','wz2','wz3','wz4','wz5','wz6'];
+// Routa пока в разработке: мастер показывает только приветствие.
+const WZ_STEPS = ['wz1'];
 let wzIdx = 0;
 let ME_LOGIN = '';   // логин текущего пользователя (для пер-юзерных флагов)
 let ME_ID = '';      // id текущего пользователя (для изоляции localStorage)
 let ME_IS_ADMIN = false;
 
-/* ПЛАТФОРМА: реестр приложений. Первые три вкладки — контент текущего
-   приложения; четвёртая вкладка (more) — общий каркас платформы
-   (профиль, настройки, переключатель приложений). */
-const APP_REGISTRY = {};   // полный реестр с сервера
-let APPS = {};             // доступные текущему пользователю
-let CURRENT_APP = 'routa';
-async function loadApps(){
-  try{
-    const reg = await (await fetch('/api/apps')).json();
-    for(const a of (reg.apps || [])) APP_REGISTRY[a.id] = a;
-    const mine = await (await fetch('/api/apps/my')).json();
-    const accessible = new Set(mine.apps || []);
-    APPS = {};
-    for(const id of accessible){ if(APP_REGISTRY[id]) APPS[id] = APP_REGISTRY[id]; }
-    // защита: Routa должен быть доступен, даже если сервер не вернул список
-    if(!APPS['routa'] && APP_REGISTRY['routa']) APPS['routa'] = APP_REGISTRY['routa'];
-    if(!APPS[CURRENT_APP]) CURRENT_APP = Object.keys(APPS)[0] || 'routa';
-    renderAppSwitcher();
-  }catch(e){ /* офлайн — оставляем статический fallback в разметке */ }
-}
-function switchApp(appId){
-  if(appId === CURRENT_APP) return;
-  const app = APPS[appId];
-  if(!app){ toast('Unknown app', false); return; }
-  if(app.url){ window.open(app.url, '_blank'); }
-  else { toast('No URL', false); }
-}
-function renderAppSwitcher(){
-  const sel = $('app-select');
-  if(!sel) return;
-  const ids = Object.keys(APPS);
-  if(ids.length){
-    sel.innerHTML = ids.map(id=>{
-      const a = APPS[id];
-      return `<option value="${a.id}">${a.icon ? a.icon+' ' : ''}${escapeHtml(a.name)}</option>`;
-    }).join('');
-  }
-  sel.value = CURRENT_APP || ids[0] || 'routa';
-}
 async function shareApp(){
   const url = location.origin + '/';
-  const text = T('share_text').replace('{app}', APPS[CURRENT_APP]?.name || 'Routa');
+  const text = T('share_text').replace('{app}', 'Routa');
   if(navigator.share){
     try{ await navigator.share({title: document.title, text, url}); return; }catch(e){}
   }
@@ -1409,6 +1320,7 @@ const CHART_COLORS = ['#0a84ff','#30d158','#ff9f0a','#ff375f','#a05cff','#5ac8fa
 function setReportPeriod(p){ REP_PERIOD=p; loadReport(); }
 function setReportView(v){ REP_VIEW=v; loadReport(); }
 async function loadReport(){
+  if(!$('report')) return;
   // чипы периодов
   $('rep-periods').innerHTML = REP_PERIODS.map(p=>
     `<span class="chip${p===REP_PERIOD?' chip-on':''}" onclick="setReportPeriod('${p}')">${T('rep_'+p)}</span>`).join('');
@@ -1625,7 +1537,6 @@ async function loadMore(){
   $('set-theme').value = s.theme||'auto';
   renderLayoutEditor();
   if($('admin-link')) $('admin-link').style.display = ME_IS_ADMIN ? 'block' : 'none';
-  renderAppSwitcher();
 }
 async function saveSettings(){
   await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -1648,6 +1559,7 @@ async function loadDailyTip(){
   }catch(e){}
 }
 async function loadTipsLibrary(){
+  if(!$('tips-library')) return;
   try{
     const data = await (await fetch('/api/analytics/tips?lang='+LANG)).json();
     const html = (data.tips||[]).map(t=>
@@ -2047,7 +1959,7 @@ let I18N = {
    ins_title:'💡 Инсайт',
    hint_title:'💡 Подсказка',hint_body:'Короткая экскурсия по приложению, если что-то непонятно.',hint:'Подсказка',
    install_app:'📲 Установить приложение на телефон',install_action:'Установить',install_ios_hint:'Нажмите «Поделиться» → «На экран Home»',install_unavailable:'Установка недоступна в этом браузере',
-   app_select:'Приложение',app_routa:'Routa',
+
    rep_last7:'7 дней',rep_week:'Эта неделя',rep_prev_week:'Прошлая неделя',rep_month:'Этот месяц',rep_prev_month:'Прошлый месяц',rep_last30:'30 дней',rep_last90:'90 дней',rep_year:'Год',rep_all:'Всё время',
    rep_income:'Доход',rep_expense:'Расход',rep_net:'Итог',rep_ops:'оп.',
    rep_top_exp:'Куда уходят деньги',rep_by_income:'Доходы по источникам',
@@ -2088,7 +2000,7 @@ let I18N = {
    // ещё/секции
    sec_planned:'📅 Запланированные расходы',sec_cats:'🗂 Категории',
    sec_trash:'🗑 Корзина (отменённые)',sec_notif:'🔔 Уведомления',sec_settings:'⚙️ Настройки',
-   sec_help:'❓ Справка',help_wizard:'🚀 Запустить мастер начала работы',
+   sec_help:'❓ Справка',help_wizard:'🚀 Открыть приветствие',
    sec_group:'👥 Пригласить людей',group_qr_hint:'Отсканируйте код или поделитесь ссылкой, чтобы пригласить человека в {app}.',
    share_link:'📤 Поделиться ссылкой',share_text:'Приглашаю тебя в {app}',share_copied:'Ссылка скопирована',share_copy_fallback:'Скопируйте ссылку:',
    sec_account:'👤 Аккаунт',acc_email:'Почта',acc_email_save:'Сохранить',
@@ -2104,7 +2016,7 @@ let I18N = {
    acc_pw_reset:'🔑 Сбросить пароль через почту',acc_pw_reset_need_email:'Укажите почту и подтвердите её, чтобы сбросить пароль',
    acc_pw_reset_sent:'Ссылка для сброса пароля отправлена на почту',acc_pw_reset_fail:'Не удалось отправить ссылку. Попробуйте позже.',
    wz_skip:'Пропустить',wz_next:'Далее →',wz_done:'Готово ✓',
-   wz1_t:'👋 Добро пожаловать в Routa',wz1_b:'Это личный учёт денег. Покажу за 6 шагов, как начать. Всё ваше — видите только вы.',
+   wz1_t:'👋 Добро пожаловать в Routa',wz1_b:'Routa помогает организовывать поездки людей на работу.\nПриложение пока в разработке — скоро здесь появятся первые функции.',
    wz2_t:'1. Заведите счёт',wz2_b:'Вкладка ✏️ → «Счета» → «➕ Новый счёт». Укажите имя (напр. «Наличные», «Карта») и валюту. Счёт — это где лежат ваши деньги.',
    wz3_t:'2. Пополните счета',wz3_b:'Чтобы остатки отражали реальность — запишите, сколько денег есть сейчас на каждом счёте: наличные в разных валютах, карты, кредитка. Сделайте это операцией «доход» на нужный счёт. Без этого остатки будут нулевыми.',
    wz4_t:'3. Долговой счёт',wz4_b:'Заняли у кого-то? Заведите счёт, напр. «В долг у Андрея», и НЕ пополняйте его. Сразу сделайте с него расход (оплату) — баланс уйдёт в минус. Минус и есть ваш долг: вернёте — пополните счёт, он выйдет в ноль.',
@@ -2141,6 +2053,8 @@ let I18N = {
    cf_cancel:'Отменить',cf_this:'эту запись',cf_triage:'Открыть разбор этой категории?',cf_restore:'Вернуть запись на',
    cat_left:'разобрана и удалена',cat_not_empty_open:'Открыть разбор?',
    widget_balances:'💰 Остатки',widget_journal:'🧾 Последние',
+   routa_coming:'Управление поездками людей на работу. Приложение в разработке.',
+   routa_ai_coming:'Аналитика поездок появится позже.',
    verify_email_title:'Подтвердите email',verify_email_body:'Мы отправили код на ',verify_email_placeholder:'000000',
    verify_email_button:'Подтвердить',verify_email_resend:'Отправить повторно',verify_email_sent:'Код отправлен. Проверьте почту.',
    verify_email_success:'Email подтверждён',verify_email_invalid:'Неверный или просроченный код',verify_email_rate_limit:'Слишком много попыток. Подождите.',
@@ -2175,7 +2089,7 @@ let I18N = {
    ins_title:'💡 Insight',
    hint_title:'💡 Hint',hint_body:'A short tour of the app if something is unclear.',hint:'Hint',
    install_app:'📲 Install app on your phone',install_action:'Install',install_ios_hint:'Tap Share → Add to Home Screen',install_unavailable:'Installation is not available in this browser',
-   app_select:'App',app_routa:'Routa',
+
    rep_last7:'7 days',rep_week:'This week',rep_prev_week:'Last week',rep_month:'This month',rep_prev_month:'Last month',rep_last30:'30 days',rep_last90:'90 days',rep_year:'Year',rep_all:'All time',
    rep_income:'Income',rep_expense:'Expense',rep_net:'Net',rep_ops:'ops',
    rep_top_exp:'Where money goes',rep_by_income:'Income by source',
@@ -2211,7 +2125,7 @@ let I18N = {
    j_empty:'no entries for this filter',j_more:'Show more',
    sec_planned:'📅 Planned expenses',sec_cats:'🗂 Categories',
    sec_trash:'🗑 Trash (cancelled)',sec_notif:'🔔 Notifications',sec_settings:'⚙️ Settings',
-   sec_help:'❓ Help',help_wizard:'🚀 Start the getting-started guide',
+   sec_help:'❓ Help',help_wizard:'🚀 Open welcome',
    sec_group:'👥 Invite people',group_qr_hint:'Scan the code or share the link to invite someone to {app}.',
    share_link:'📤 Share link',share_text:'I invite you to {app}',share_copied:'Link copied',share_copy_fallback:'Copy the link:',
    sec_account:'👤 Account',acc_email:'Email',acc_email_save:'Save',
@@ -2227,7 +2141,7 @@ let I18N = {
    acc_pw_reset:'🔑 Reset password by email',acc_pw_reset_need_email:'Set and verify your email to reset password',
    acc_pw_reset_sent:'Password reset link sent to your email',acc_pw_reset_fail:'Could not send reset link. Try again later.',
    wz_skip:'Skip',wz_next:'Next →',wz_done:'Done ✓',
-   wz1_t:'👋 Welcome to Routa',wz1_b:'Personal money tracking. I will show you how to start in 6 steps. Everything is yours — only you can see it.',
+   wz1_t:'👋 Welcome to Routa',wz1_b:'Routa helps organize people commute trips.\nThe app is under development — first features are coming soon.',
    wz2_t:'1. Add an account',wz2_b:'Tab ✏️ → “Accounts” → “➕ New account”. Give it a name (e.g. “Cash”, “Card”) and a currency. An account is where your money sits.',
    wz3_t:'2. Fund your accounts',wz3_b:'So balances reflect reality, record how much money you actually have on each account now: cash in different currencies, cards, credit card. Do it as an “income” operation into that account. Without this, balances stay at zero.',
    wz4_t:'3. A debt account',wz4_b:'Borrowed from someone? Create an account, e.g. “Borrowed from Andrey”, and do NOT fund it. Just make an expense (payment) from it — the balance goes negative. That minus is your debt: when you repay, fund the account and it returns to zero.',
@@ -2258,6 +2172,8 @@ let I18N = {
    cf_cancel:'Cancel',cf_this:'this entry',cf_triage:'Open sort-out for this category?',cf_restore:'Restore entry of',
    cat_left:'sorted out and deleted',cat_not_empty_open:'Open sort-out?',
    widget_balances:'💰 Balances',widget_journal:'🧾 Recent',
+   routa_coming:'People commute management. The app is under development.',
+   routa_ai_coming:'Trip analytics will appear later.',
    verify_email_title:'Verify email',verify_email_body:'We sent a code to ',verify_email_placeholder:'000000',
    verify_email_button:'Verify',verify_email_resend:'Send again',verify_email_sent:'Code sent. Check your email.',
    verify_email_success:'Email verified',verify_email_invalid:'Invalid or expired code',verify_email_rate_limit:'Too many attempts. Please wait.',
@@ -2292,7 +2208,7 @@ let I18N = {
    ins_title:'💡 인사이트',
    hint_title:'💡 힌트',hint_body:'무언가 이해가 안 되면 짧은 앱 둘러보기를 시작하세요.',hint:'힌트',
    install_app:'📲 휴태폰에 앱 설치',install_action:'설치',install_ios_hint:'공유 → 홈 화면에 추가를 누르세요',install_unavailable:'이 브라우저에서는 설치할 수 없습니다',
-   app_select:'앱',app_routa:'Routa',
+
    rep_last7:'7일',rep_week:'이번 주',rep_prev_week:'지난 주',rep_month:'이번 달',rep_prev_month:'지난 달',rep_last30:'30일',rep_last90:'90일',rep_year:'올해',rep_all:'전체 기간',
    rep_income:'수입',rep_expense:'지출',rep_net:'합계',rep_ops:'건',
    rep_top_exp:'돈이 나가는 곳',rep_by_income:'출처별 수입',
@@ -2327,7 +2243,7 @@ let I18N = {
    j_empty:'해당 필터에 내역 없음',j_more:'더 보기',
    sec_planned:'📅 예정 지출',sec_cats:'🗂 분류',
    sec_trash:'🗑 휴지통 (취소됨)',sec_notif:'🔔 알림',sec_settings:'⚙️ 설정',
-   sec_help:'❓ 도움말',help_wizard:'🚀 시작 마법사 실행',
+   sec_help:'❓ 도움말',help_wizard:'🚀 시작 인사 열기',
    sec_group:'👥 사람 초대',group_qr_hint:'{app}에 사람을 초대하려면 코드를 스캔하거나 링크를 공유하세요.',
    share_link:'📤 링크 공유',share_text:'{app}에 초대합니다',share_copied:'링크가 복사되었습니다',share_copy_fallback:'링크를 복사하세요:',
    sec_account:'👤 계정',acc_email:'이메일',acc_email_save:'저장',
@@ -2343,7 +2259,7 @@ let I18N = {
    acc_pw_reset:'🔑 이메일로 비밀번호 재설정',acc_pw_reset_need_email:'비밀번호를 재설정하려면 이메일을 입력하고 인증하세요',
    acc_pw_reset_sent:'비밀번호 재설정 링크가 이메일로 발송되었습니다',acc_pw_reset_fail:'링크를 별냈을 수 없습니다. 잠시 후 다시 시도하세요.',
    wz_skip:'건너뛰기',wz_next:'다음 →',wz_done:'완료 ✓',
-   wz1_t:'👋 Routa에 오신 것을 환영합니다',wz1_b:'개인 가계부입니다. 6단계로 시작 방법을 안내합니다. 모든 데이터는 본인만 볼 수 있습니다.',
+   wz1_t:'👋 Routa에 오신 것을 환영합니다',wz1_b:'Routa는 출퇴근 인원 운송을 돕습니다.\n앱을 개발 중이며 곧 첫 기능이 공개됩니다.',
    wz2_t:'1. 계좌 만들기',wz2_b:'✏️ 탭 → “계좌” → “➕ 새 계좌”. 이름(예: “현금”, “카드”)과 통화를 지정하세요. 계좌는 돈이 있는 곳입니다.',
    wz3_t:'2. 계좌 충전',wz3_b:'잔액이 현실을 반영하도록, 지금 각 계좌에 실제로 있는 금액을 기록하세요: 여러 통화의 현금, 카드, 신용카드. 해당 계좌로 “수입” 거래로 입력하면 됩니다. 이렇게 하지 않으면 잔액은 0으로 남습니다.',
    wz4_t:'3. 부채 계좌',wz4_b:'누군가에게 빌렸나요? 예: “안드레이에게 빌림” 계좌를 만들고 충전하지 마세요. 바로 그 계좌에서 지출(지불)을 기록하면 잔액이 마이너스가 됩니다. 그 마이너스가 빚입니다: 갚으면 계좌를 충전해 0으로 돌아갑니다.',
@@ -2374,6 +2290,8 @@ let I18N = {
    cf_cancel:'취소',cf_this:'이 항목',cf_triage:'이 분류 정리를 열까요?',cf_restore:'항목 복원',
    cat_left:'정리 후 삭제됨',cat_not_empty_open:'정리를 열까요?',
    widget_balances:'💰 잔액',widget_journal:'🧾 최근',
+   routa_coming:'출퇴근 인원 운송 관리. 앱을 개발 중입니다.',
+   routa_ai_coming:'이동 분석은 추후 제공됩니다.',
    verify_email_title:'이메일 인증',verify_email_body:'인증 코드를 전송했습니다: ',verify_email_placeholder:'000000',
    verify_email_button:'인증',verify_email_resend:'다시 본내기',verify_email_sent:'코드를 별냈습니다. 메일을 확인하세요.',
    verify_email_success:'이메일 인증 완료',verify_email_invalid:'잘못되거나 만료된 코드입니다',verify_email_rate_limit:'너무 많은 시도입니다. 잠시 후 다시 시도하세요.',
@@ -2551,7 +2469,6 @@ async function bootGlossary(){
   await loadFormData(); kanban(0); opChanged(); applyLayout();
   loadVerifyBanner();  // показать баннер подтверждения email, если нужно
   maybeAutoWizard();   // новому пользователю — экскурс (один раз, пер-юзерно)
-  await loadApps();    // доступные приложения платформы + переключатель
 })();
 </script>
 </body>
