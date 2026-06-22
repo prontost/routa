@@ -3,7 +3,7 @@
 > Project-specific handoff and operating rules for Routa.
 > If you lost context, read this file first, then `README.md`, then run tests.
 >
-> Last updated: 2026-06-21 — after AI/LLM layer removal.
+> Last updated: 2026-06-14 — after creation from Counta and app-switcher removal.
 
 ## 0. Quick recovery for a new agent
 
@@ -22,20 +22,21 @@ For operator-level context (personal profile, family rules, cross-project conven
 
 ## 1. What Routa is
 
-Routa is a personal/family double-entry bookkeeping PWA, currently live at `https://routa.avalone.online`.
+Routa is a work-in-progress app for organizing people commute / work trips. It is live at `https://routa.avalone.online`, but the UI is currently a placeholder: the home page and analytics page show a "coming soon" card.
+
+The codebase was bootstrapped as a copy of Counta, so the backend still contains the same double-entry ledger, accounts, categories and journal machinery. Those screens are hidden or will be reworked into trip-management flows as the product evolves.
 
 It is a **standalone application** under the `avalone.online` umbrella. The landing page at `https://avalone.online` simply lists available apps and links to them; Routa keeps its own users, database and UI.
 
-- **No AI / LLM / STT / vision.** The app was recently stripped of all AI features. Everything is deterministic.
-- **Own ledger.** It uses a private SQLite double-entry ledger, not ERPNext or any external accounting system.
-- **Small scale.** Designed for one person, a couple, or a small family/group. One SQLite DB per instance.
+- **No AI / LLM / STT / vision.** Everything is deterministic.
+- **Own database.** SQLite at `~/.routa/routa.db`; currently it still uses Counta-style ledger tables.
 - **i18n-first.** User-facing strings are stored in a central glossary with `ru`, `en`, `ko` translations.
 
 ### 1.1 avalone.online platform
 
 - `~/github-work/avalone-landing` — separate project that hosts the landing/catalog at `https://avalone.online`.
 - Routa does **not** depend on the landing; the landing only links to apps.
-- App switcher inside Routa uses the same app catalog and opens other apps via ordinary links (`window.location.href`).
+- Routa has **no built-in app switcher**. Users navigate between apps via the landing page or ordinary links.
 
 ---
 
@@ -190,6 +191,7 @@ Page routes (login, register, recover, admin dashboard) live in `src/routa/web/a
 The frontend is in `src/routa/web/templates/app.html` (~2.3k lines, no framework).
 
 - **SPA pages:** `div#page-entry`, `#page-balances`, `#page-ai`, `#page-more`. Bottom tab bar switches visibility.
+- **Placeholder state:** `#page-entry` (home) and `#page-ai` (analytics) currently show a "coming soon" card. The operation form, journal and editor screens still exist from the Counta fork but are not part of the public Routa UX yet.
 - **State:** global JS variables (`FD`, `LANG`, `LAYOUT`, `jFilter`, `pending`, `modalStack`).
 - **Modals/sheets:** operation form, filter panel, wizard are overlays integrated with `history.pushState` so the Android back button closes them.
 - **i18n:** static strings via `data-i`, `data-i-ph`, `data-i-title`; dynamic via `T('key')`.
@@ -225,13 +227,14 @@ The frontend is in `src/routa/web/templates/app.html` (~2.3k lines, no framework
 
 ### 7.3 Production runtime
 
-Current prod runs on a Samsung Galaxy A30 (Termux + PRoot Ubuntu):
-- Routa web: tmux session `routa`, uvicorn on `127.0.0.1:8810`.
-- `ROUTA_DB_PATH=/data/data/com.termux/files/home/.routa/routa.db` so the database lives in persistent Termux home, not inside the ephemeral PRoot container rootfs.
-- Public access: Cloudflare Tunnel session `cf`.
-- MacBook launchd agents (`online.avalone.routa-web`, `online.avalone.routa-tunnel`) are retired.
+Current prod runs on the MacBook via `launchd` agents managed by the operator:
+- Routa web: `online.avalone.routa-web`, uvicorn on `127.0.0.1:8812`.
+- Cloudflare tunnel: `online.avalone.routa-tunnel` exposes `https://routa.avalone.online` via a wildcard `*.avalone.online` CNAME.
+- Database: `~/.routa/routa.db` (SQLite). Override with `ROUTA_DB_PATH` if the runtime `$HOME` differs from the persistent data directory (e.g. inside containers).
 
-See `denis-root-continuity/skills/infrastructure.md` for A30 access and service commands.
+The earlier experiment with Samsung Galaxy A30 (Termux + PRoot Ubuntu) is no longer active.
+
+See `denis-root-continuity/skills/infrastructure.md` for host access and service commands.
 
 ### 7.4 Deploy gate
 

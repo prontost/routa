@@ -1,12 +1,13 @@
 # Routa
 
-Personal/family double-entry bookkeeping PWA at `https://routa.avalone.online`.
+Work-in-progress app for organizing people commute / work trips. Live at `https://routa.avalone.online`.
 
-- **Own SQLite ledger** — no external accounting system, no ERPNext, no AI.
-- **Multi-tenant** — one DB instance can host a few users (family/small group).
+Currently the public UI is a placeholder: home and analytics show a "coming soon" card. The codebase was forked from Counta, so the backend still carries the double-entry ledger machinery while the product is being repurposed.
+
+- **Own SQLite database** — no external accounting system, no ERPNext, no AI.
+- **Standalone** — own login and DB; no built-in app switcher; SSO is a future direction, not implemented yet.
 - **i18n-first** — `ru` / `en` / `ko` from a central glossary.
-- **Deterministic analytics** — reports, trends, and financial tips are rule-based.
-- **Live currency conversion** — fiat via open.er-api.com, crypto via CoinGecko.
+- **Forked from Counta** — accounts, journal and reports still exist in code but will be reworked into trip-management flows.
 
 ## Stack
 
@@ -26,7 +27,7 @@ cp .env.example .env
 # Optional: override SQLite path (default is ~/.routa/routa.db)
 # export ROUTA_DB_PATH=/path/to/routa.db
 uv run python scripts/pre_flight.py   # deploy gate
-uv run uvicorn routa.web.app:app --host 127.0.0.1 --port 8810 --reload
+uv run uvicorn routa.web.app:app --host 127.0.0.1 --port 8812 --reload
 ```
 
 Open `http://127.0.0.1:8810`.
