@@ -124,7 +124,8 @@ def _tenant_of(request: Request) -> int:
 async def auth_gate(request: Request, call_next):
     open_paths = {"/login", "/register", "/recover", "/reset",
                   "/admin/login", "/admin",
-                  "/manifest.json", "/sw.js", "/healthz", "/icon.svg",
+                  "/manifest.json", "/sw.js", "/healthz",
+                  "/icon.svg", "/icon-192.png", "/icon-512.png",
                   "/api/version", "/api/apps", "/qr"}
     tid = _tenant_of(request)
     # КАЖДЫЙ запрос ставит текущего тенанта в contextvar — все запросы к БД
@@ -443,13 +444,27 @@ async def manifest():
         "name": "Routa", "short_name": "Routa",
         "start_url": "/", "display": "standalone",
         "background_color": "#0f1115", "theme_color": "#0f1115",
-        "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"}],
+        "icons": [
+            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"},
+        ],
     }
 
 
 @app.get("/icon.svg")
 async def icon():
     return FileResponse(BASE / "static" / "icon.svg", media_type="image/svg+xml")
+
+
+@app.get("/icon-192.png")
+async def icon_192():
+    return FileResponse(BASE / "static" / "icon-192.png", media_type="image/png")
+
+
+@app.get("/icon-512.png")
+async def icon_512():
+    return FileResponse(BASE / "static" / "icon-512.png", media_type="image/png")
 
 
 @app.get("/qr")

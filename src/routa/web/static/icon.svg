@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
 <rect width="100" height="100" rx="22" fill="#0f1115"/>
-<text x="50" y="70" font-size="56" text-anchor="middle" fill="#d29922" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="bold">R</text>
+<rect x="14" y="38" width="72" height="32" rx="10" fill="#d29922"/>
+<rect x="54" y="44" width="24" height="14" rx="4" fill="#0f1115"/>
+<circle cx="30" cy="74" r="8" fill="#0f1115" stroke="#9aa3b2" stroke-width="2"/>
+<circle cx="72" cy="74" r="8" fill="#0f1115" stroke="#9aa3b2" stroke-width="2"/>
 </svg>
