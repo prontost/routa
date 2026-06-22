@@ -1049,7 +1049,7 @@ function switchApp(appId){
   if(appId === CURRENT_APP) return;
   const app = APPS[appId];
   if(!app){ toast('Unknown app', false); return; }
-  if(app.url){ window.location.href = app.url; }
+  if(app.url){ window.open(app.url, '_blank'); }
   else { toast('No URL', false); }
 }
 function renderAppSwitcher(){
