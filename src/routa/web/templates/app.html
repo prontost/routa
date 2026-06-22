@@ -12,7 +12,7 @@
 (function(){try{var t=localStorage.getItem('routa_theme');
   if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}})();
 </script>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/manifest.json?v={{ build_id }}">
 <style>
 /* ТЕМА: тёмные значения — переменные ниже. Светлая тема переопределяет их.
    Режимы: авто (по системной prefers-color-scheme) | light | dark (через

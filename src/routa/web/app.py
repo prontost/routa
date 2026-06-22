@@ -435,36 +435,36 @@ def _no_cache(resp):
 
 @app.get("/", response_class=HTMLResponse)
 async def app_page(request: Request):
-    return _no_cache(templates.TemplateResponse(request, "app.html", {}))
+    return _no_cache(templates.TemplateResponse(request, "app.html", {"build_id": BUILD_ID}))
 
 
 @app.get("/manifest.json")
 async def manifest():
-    return {
+    return _no_cache(JSONResponse({
         "name": "Routa", "short_name": "Routa",
         "start_url": "/", "display": "standalone",
         "background_color": "#0f1115", "theme_color": "#0f1115",
         "icons": [
-            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
-            {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml"},
+            {"src": f"/icon-192.png?v={BUILD_ID}", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": f"/icon-512.png?v={BUILD_ID}", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+            {"src": f"/icon.svg?v={BUILD_ID}", "sizes": "any", "type": "image/svg+xml"},
         ],
-    }
+    }))
 
 
 @app.get("/icon.svg")
 async def icon():
-    return FileResponse(BASE / "static" / "icon.svg", media_type="image/svg+xml")
+    return _no_cache(FileResponse(BASE / "static" / "icon.svg", media_type="image/svg+xml"))
 
 
 @app.get("/icon-192.png")
 async def icon_192():
-    return FileResponse(BASE / "static" / "icon-192.png", media_type="image/png")
+    return _no_cache(FileResponse(BASE / "static" / "icon-192.png", media_type="image/png"))
 
 
 @app.get("/icon-512.png")
 async def icon_512():
-    return FileResponse(BASE / "static" / "icon-512.png", media_type="image/png")
+    return _no_cache(FileResponse(BASE / "static" / "icon-512.png", media_type="image/png"))
 
 
 @app.get("/qr")
