@@ -9,12 +9,12 @@ import pytest
 
 @pytest.fixture
 def sl(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
+    import routa.core.tenant as tenant
     importlib.reload(tenant)
-    import counta.core.sqlledger as sl
+    import routa.core.sqlledger as sl
     importlib.reload(sl)
     return sl, tenant
 
@@ -70,7 +70,7 @@ def test_no_tenant_blocks_access(sl):
 def test_money_registry_isolated(sl):
     led, tenant = sl
     import importlib
-    import counta.core.money as money
+    import routa.core.money as money
     importlib.reload(money)
     tenant.set_current(1)
     money.register("acc1", "bank", 0, currency="USD")
@@ -86,7 +86,7 @@ def test_money_registry_isolated(sl):
 def test_catalog_labels_isolated(sl):
     led, tenant = sl
     import importlib
-    import counta.core.catalog as catalog
+    import routa.core.catalog as catalog
     importlib.reload(catalog)
     tenant.set_current(1)
     catalog.set_labels("x", "Аанглу", "Aenglu", "Akr")
@@ -99,7 +99,7 @@ def test_catalog_labels_isolated(sl):
 def test_settings_isolated(sl):
     led, tenant = sl
     import importlib
-    import counta.core.notify as notify
+    import routa.core.notify as notify
     importlib.reload(notify)
     tenant.set_current(1)
     notify.set_settings({"lang": "en"})

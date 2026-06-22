@@ -1,6 +1,6 @@
-# Counta
+# Routa
 
-Personal/family double-entry bookkeeping PWA at `https://counta.avalone.online`.
+Personal/family double-entry bookkeeping PWA at `https://routa.avalone.online`.
 
 - **Own SQLite ledger** — no external accounting system, no ERPNext, no AI.
 - **Multi-tenant** — one DB instance can host a few users (family/small group).
@@ -12,7 +12,7 @@ Personal/family double-entry bookkeeping PWA at `https://counta.avalone.online`.
 
 - Python ≥3.13, managed with `uv`
 - FastAPI + Uvicorn
-- SQLite (`~/.counta/counta.db`; override with `COUNTA_DB_PATH`)
+- SQLite (`~/.routa/routa.db`; override with `ROUTA_DB_PATH`)
 - Jinja2 + vanilla JS SPA
 - `itsdangerous` signed session cookies
 - pytest for tests
@@ -21,12 +21,12 @@ Personal/family double-entry bookkeeping PWA at `https://counta.avalone.online`.
 
 ```bash
 uv sync
-# Create .env from example and fill COUNTA_FERNET_KEY at minimum:
+# Create .env from example and fill ROUTA_FERNET_KEY at minimum:
 cp .env.example .env
-# Optional: override SQLite path (default is ~/.counta/counta.db)
-# export COUNTA_DB_PATH=/path/to/counta.db
+# Optional: override SQLite path (default is ~/.routa/routa.db)
+# export ROUTA_DB_PATH=/path/to/routa.db
 uv run python scripts/pre_flight.py   # deploy gate
-uv run uvicorn counta.web.app:app --host 127.0.0.1 --port 8810 --reload
+uv run uvicorn routa.web.app:app --host 127.0.0.1 --port 8810 --reload
 ```
 
 Open `http://127.0.0.1:8810`.

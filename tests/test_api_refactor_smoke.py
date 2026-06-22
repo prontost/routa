@@ -8,13 +8,13 @@ import pytest
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
-    import counta.core.sqlledger as sl
-    import counta.core.engine as engine
-    import counta.core.global_settings as gs
+    import routa.core.tenant as tenant
+    import routa.core.sqlledger as sl
+    import routa.core.engine as engine
+    import routa.core.global_settings as gs
     importlib.reload(tenant)
     importlib.reload(sl)
     importlib.reload(engine)
@@ -22,21 +22,21 @@ def client(tmp_path, monkeypatch):
     tenant.set_current(1)
 
     from fastapi.testclient import TestClient
-    from counta.web.app import app
+    from routa.web.app import app
 
     c = TestClient(app)
     tenant.ensure_owner("owner", "ownerpass")
     tenant.set_current(tenant.OWNER_TENANT_ID)
-    from counta.core import catalog
+    from routa.core import catalog
     asyncio.run(catalog.ensure_user_catalog())
-    from counta.web.app import _signer
-    c.cookies.set("counta_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
+    from routa.web.app import _signer
+    c.cookies.set("routa_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
     return c
 
 
 @pytest.fixture
 def seed_entries(client, monkeypatch):
-    from counta.core import tenant, engine
+    from routa.core import tenant, engine
     tenant.set_current(tenant.authenticate("owner", "ownerpass"))
 
     async def _seed():
@@ -91,7 +91,7 @@ def test_analytics_endpoints(client, seed_entries):
 def test_analytics_summary_includes_debts(client, seed_entries):
     """Трата из счёта-займа (Liability) создаёт отрицательный баланс — он должен
     попасть в debts в аналитике."""
-    from counta.core import tenant, engine
+    from routa.core import tenant, engine
     tenant.set_current(tenant.authenticate("owner", "ownerpass"))
 
     async def _make_debt():
@@ -146,7 +146,7 @@ def test_account_disable_money_account(client, seed_entries):
 
 def test_verify_code_uses_client_ip(client, monkeypatch):
     """/send-verify-code использует _client_ip — проверяем, что не 500."""
-    from counta.core import tenant, notify
+    from routa.core import tenant, notify
     tenant.set_current(tenant.authenticate("owner", "ownerpass"))
     tenant.set_email(tenant.current(), "test@example.com")
     monkeypatch.setattr(notify, "_send_email", lambda *a, **kw: True)

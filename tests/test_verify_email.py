@@ -6,10 +6,10 @@ import pytest
 
 @pytest.fixture
 def tenant(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
+    import routa.core.tenant as tenant
     importlib.reload(tenant)
     return tenant
 

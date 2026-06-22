@@ -4,13 +4,13 @@ import os
 from alembic import context
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from counta.db.models import Base
+from routa.db.models import Base
 
 config = context.config
 target_metadata = Base.metadata
 
 database_url = os.environ.get(
-    "COUNTA_DATABASE_URL", "postgresql+asyncpg://localhost/counta"
+    "ROUTA_DATABASE_URL", "postgresql+asyncpg://localhost/routa"
 )
 config.set_main_option("sqlalchemy.url", database_url)
 

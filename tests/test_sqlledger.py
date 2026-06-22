@@ -11,14 +11,14 @@ import pytest
 
 @pytest.fixture
 def led(tmp_path, monkeypatch):
-    # своя БД на тест — не трогаем рабочую counta.db
-    import counta.core.db as db
+    # своя БД на тест — не трогаем рабочую routa.db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
+    import routa.core.tenant as tenant
     importlib.reload(tenant)
     tenant.set_current(1)
-    import counta.core.sqlledger as sl
+    import routa.core.sqlledger as sl
     importlib.reload(sl)
     # счета: денежный (актив) + категория (расход) + доход
     sl.create_account("Cash", None, "Asset", "Cash")

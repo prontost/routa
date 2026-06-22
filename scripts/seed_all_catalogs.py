@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from counta.core import catalog, db, tenant
+from routa.core import catalog, db, tenant
 
 
 async def _seed(tid: int) -> int:

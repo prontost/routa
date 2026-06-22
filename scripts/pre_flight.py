@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Counta deployment pre-flight / update contract.
+"""Routa deployment pre-flight / update contract.
 
 Run this before every deploy or after any non-trivial change. It checks:
 
@@ -7,7 +7,7 @@ Run this before every deploy or after any non-trivial change. It checks:
 2. Unit tests pass.
 3. i18n linter is green.
 4. Inline JavaScript in app.html parses without syntax errors.
-5. (Optional) Local Counta server responds on /healthz.
+5. (Optional) Local Routa server responds on /healthz.
 
 Exit code 0 = safe to deploy. Anything else = stop and fix.
 """
@@ -20,8 +20,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src" / "counta"
-APP_HTML = ROOT / "src" / "counta" / "web" / "templates" / "app.html"
+SRC = ROOT / "src" / "routa"
+APP_HTML = ROOT / "src" / "routa" / "web" / "templates" / "app.html"
 
 
 def run(cmd: list[str], *, cwd: Path | None = None, env: dict | None = None) -> subprocess.CompletedProcess:
@@ -30,7 +30,7 @@ def run(cmd: list[str], *, cwd: Path | None = None, env: dict | None = None) -> 
 
 
 def check_python_syntax() -> bool:
-    """Compile every .py under src/counta."""
+    """Compile every .py under src/routa."""
     ok = True
     for path in SRC.rglob("*.py"):
         if path.name.startswith("."):
@@ -126,7 +126,7 @@ def check_healthz() -> bool:
 
 def main() -> int:
     print("=" * 60)
-    print("Counta pre-flight / update contract")
+    print("Routa pre-flight / update contract")
     print("=" * 60)
 
     checks = [

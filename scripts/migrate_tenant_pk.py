@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-DB = Path.home() / ".counta" / "counta.db"
+DB = Path.home() / ".routa" / "routa.db"
 
 # таблица -> (новый CREATE, список колонок в порядке для копирования)
 REBUILDS = {
@@ -61,7 +61,7 @@ REBUILDS = {
 
 
 def main():
-    bak = DB.parent / f"counta.db.pre-tenantpk-{datetime.now():%Y%m%d-%H%M%S}"
+    bak = DB.parent / f"routa.db.pre-tenantpk-{datetime.now():%Y%m%d-%H%M%S}"
     shutil.copy2(DB, bak)
     print("бэкап:", bak.name)
     con = sqlite3.connect(DB)

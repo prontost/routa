@@ -1,8 +1,8 @@
-"""Страж чистоты боевой БД: в counta.db не должно быть записей с тест-маркерами.
+"""Страж чистоты боевой БД: в routa.db не должно быть записей с тест-маркерами.
 
 Если этот тест падает — кто-то (включая меня, ИИ) прогнал тест на боевой
-counta.db вместо temp-БД и оставил мусор. Все тестовые прогоны ОБЯЗАНЫ идти в
-изолированной БД (monkeypatch core.db.DB_PATH), не в ~/.counta/counta.db.
+routa.db вместо temp-БД и оставил мусор. Все тестовые прогоны ОБЯЗАНЫ идти в
+изолированной БД (monkeypatch core.db.DB_PATH), не в ~/.routa/routa.db.
 """
 from pathlib import Path
 
@@ -16,12 +16,12 @@ JUNK_MARKERS = (
 
 
 @pytest.mark.skipif(
-    not (Path.home() / ".counta" / "counta.db").exists(),
-    reason="боевой counta.db отсутствует (CI/чистая среда) — нечего проверять",
+    not (Path.home() / ".routa" / "routa.db").exists(),
+    reason="боевой routa.db отсутствует (CI/чистая среда) — нечего проверять",
 )
 def test_prod_ledger_has_no_junk():
     import sqlite3
-    db = Path.home() / ".counta" / "counta.db"
+    db = Path.home() / ".routa" / "routa.db"
     con = sqlite3.connect(db)
     try:
         # таблица леджера может отсутствовать на свежей БД — тогда мусора нет
@@ -36,5 +36,5 @@ def test_prod_ledger_has_no_junk():
     junk = [r[0] for r in rows
             if any(m in (r[1] or "").lower() for m in JUNK_MARKERS)]
     assert not junk, (
-        f"в боевом counta.db {len(junk)} тест-записей: {junk[:10]} — "
+        f"в боевом routa.db {len(junk)} тест-записей: {junk[:10]} — "
         f"прогоняй тесты на temp-БД, не на боевой!")

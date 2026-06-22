@@ -3,7 +3,7 @@
 которые не входят в канонический дефолтный набор.
 
 Пустая = ни одной строки в led_lines (включая отменённые проводки).
-Недефолтная = не входит в counta.core.catalog.DEFAULT_KEYS.
+Недефолтная = не входит в routa.core.catalog.DEFAULT_KEYS.
 
 Запускать вручную, с --apply для реального удаления."""
 from __future__ import annotations
@@ -15,9 +15,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from counta.core.catalog import DEFAULT_KEYS, canon_key
-from counta.core.db import DB_PATH
-from counta.core.tenant import OWNER_TENANT_ID
+from routa.core.catalog import DEFAULT_KEYS, canon_key
+from routa.core.db import DB_PATH
+from routa.core.tenant import OWNER_TENANT_ID
 
 DEFAULT_PKS = {canon_key(k) for k in DEFAULT_KEYS}
 

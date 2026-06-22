@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-TEMPLATE = Path(__file__).resolve().parent.parent / "src/counta/web/templates/app.html"
+TEMPLATE = Path(__file__).resolve().parent.parent / "src/routa/web/templates/app.html"
 
 
 def extract_i18n_keys(js: str) -> dict[str, set[str]]:

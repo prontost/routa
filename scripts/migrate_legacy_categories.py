@@ -16,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from counta.core.catalog import CANON, canon_key
-from counta.core.db import DB_PATH
-from counta.core.tenant import OWNER_TENANT_ID
+from routa.core.catalog import CANON, canon_key
+from routa.core.db import DB_PATH
+from routa.core.tenant import OWNER_TENANT_ID
 
 
 CANON_KEYS = {canon_key(name) for name in CANON}

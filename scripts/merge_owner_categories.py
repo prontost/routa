@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from counta.core.db import DB_PATH
-from counta.core.tenant import OWNER_TENANT_ID
+from routa.core.db import DB_PATH
+from routa.core.tenant import OWNER_TENANT_ID
 
 MAPPING: dict[str, str] = {
     "cat_groceries": "cat_food",

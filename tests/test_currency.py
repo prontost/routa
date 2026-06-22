@@ -7,14 +7,14 @@ import pytest
 
 
 def _reset_db(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
-    import counta.core.sqlledger as sl
-    import counta.core.engine as engine
-    import counta.core.global_settings as gs
-    import counta.core.money as money
+    import routa.core.tenant as tenant
+    import routa.core.sqlledger as sl
+    import routa.core.engine as engine
+    import routa.core.global_settings as gs
+    import routa.core.money as money
     importlib.reload(tenant)
     importlib.reload(sl)
     importlib.reload(engine)
@@ -27,12 +27,12 @@ def _reset_db(tmp_path, monkeypatch):
 @pytest.fixture
 def engine_env(tmp_path, monkeypatch):
     _reset_db(tmp_path, monkeypatch)
-    import counta.core.tenant as tenant
+    import routa.core.tenant as tenant
     tenant.ensure_owner("owner", "ownerpass")
 
 
 def test_transfer_between_different_currencies_fails(engine_env):
-    from counta.core import engine, money
+    from routa.core import engine, money
 
     async def run():
         krw = await engine.create_account("KRW Cash", None, "Asset", "Cash")
@@ -47,7 +47,7 @@ def test_transfer_between_different_currencies_fails(engine_env):
 
 
 def test_transfer_between_same_currencies_ok(engine_env):
-    from counta.core import engine, money
+    from routa.core import engine, money
 
     async def run():
         krw1 = await engine.create_account("KRW Bank", None, "Asset", "Bank")

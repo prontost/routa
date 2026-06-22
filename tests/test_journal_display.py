@@ -8,15 +8,15 @@ import pytest
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
-    import counta.core.sqlledger as sl
-    import counta.core.engine as engine
-    import counta.core.global_settings as gs
-    import counta.core.money as money
-    import counta.core.catalog as catalog
+    import routa.core.tenant as tenant
+    import routa.core.sqlledger as sl
+    import routa.core.engine as engine
+    import routa.core.global_settings as gs
+    import routa.core.money as money
+    import routa.core.catalog as catalog
     importlib.reload(tenant)
     importlib.reload(sl)
     importlib.reload(engine)
@@ -26,17 +26,17 @@ def client(tmp_path, monkeypatch):
     tenant.set_current(1)
 
     from fastapi.testclient import TestClient
-    from counta.web.app import app
+    from routa.web.app import app
 
     c = TestClient(app)
     tenant.ensure_owner("owner", "ownerpass")
-    from counta.web.app import _signer
-    c.cookies.set("counta_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
+    from routa.web.app import _signer
+    c.cookies.set("routa_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
     return c
 
 
 async def _seed_expense():
-    from counta.core import engine, money
+    from routa.core import engine, money
     cash = await engine.create_account("Cash", None, "Asset", "Cash")
     groc = await engine.create_account("Groceries", None, "Expense")
     money.register(cash, "cash", 0, "KRW")
@@ -46,7 +46,7 @@ async def _seed_expense():
 
 
 async def _seed_income():
-    from counta.core import engine, money
+    from routa.core import engine, money
     cash = await engine.create_account("Cash", None, "Asset", "Cash")
     sal = await engine.create_account("Salary", None, "Income")
     money.register(cash, "cash", 0, "KRW")
@@ -56,7 +56,7 @@ async def _seed_income():
 
 
 async def _seed_transfer():
-    from counta.core import engine, money
+    from routa.core import engine, money
     card = await engine.create_account("Bank KB", None, "Asset", "Bank")
     cash = await engine.create_account("Cash", None, "Asset", "Cash")
     money.register(card, "bank", 0, "KRW")
@@ -100,7 +100,7 @@ def test_journal_transfer_op_and_labels(client):
 
 def test_journal_disabled_category_shows_label_not_key(client):
     cash, groc, _ = asyncio.run(_seed_expense())
-    from counta.core import engine
+    from routa.core import engine
     asyncio.run(engine.disable_account(groc))
     r = client.get("/api/entries?limit=1")
     assert r.status_code == 200

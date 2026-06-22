@@ -8,13 +8,13 @@ import pytest
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
-    import counta.core.sqlledger as sl
-    import counta.core.engine as engine
-    import counta.core.global_settings as gs
+    import routa.core.tenant as tenant
+    import routa.core.sqlledger as sl
+    import routa.core.engine as engine
+    import routa.core.global_settings as gs
     importlib.reload(tenant)
     importlib.reload(sl)
     importlib.reload(engine)
@@ -22,19 +22,19 @@ def client(tmp_path, monkeypatch):
     tenant.set_current(1)
 
     from fastapi.testclient import TestClient
-    from counta.web.app import app
+    from routa.web.app import app
 
     c = TestClient(app)
     # seed tenant and set signed session cookie directly (avoids rate-limit in tests)
     tenant.ensure_owner("owner", "ownerpass")
-    from counta.web.app import _signer
-    c.cookies.set("counta_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
+    from routa.web.app import _signer
+    c.cookies.set("routa_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
     return c
 
 
 @pytest.fixture
 def seed_entries(client):
-    from counta.core import tenant, engine
+    from routa.core import tenant, engine
     tenant.set_current(tenant.authenticate("owner", "ownerpass"))
 
     async def _seed():

@@ -4,12 +4,12 @@ import pytest
 
 @pytest.fixture
 def ctx(tmp_path, monkeypatch):
-    import counta.core.db as db
+    import routa.core.db as db
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
     import importlib
-    import counta.core.tenant as tenant
-    import counta.core.global_settings as global_settings
-    import counta.core.config as config
+    import routa.core.tenant as tenant
+    import routa.core.global_settings as global_settings
+    import routa.core.config as config
     importlib.reload(tenant)
     importlib.reload(global_settings)
     importlib.reload(config)
@@ -37,7 +37,7 @@ def test_non_owner_cannot_change_global_settings(ctx):
 def test_registration_mode_env_fallback(ctx, monkeypatch):
     tenant, gs, config = ctx
     # no DB value set, should fall back to env default
-    monkeypatch.setenv("COUNTA_REGISTRATION_MODE", "closed")
+    monkeypatch.setenv("ROUTA_REGISTRATION_MODE", "closed")
     import importlib
     importlib.reload(config)
     assert config.registration_mode() == "closed"

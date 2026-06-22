@@ -1,6 +1,6 @@
-# Agent guidance for Counta
+# Agent guidance for Routa
 
-> Project-specific handoff and operating rules for Counta.
+> Project-specific handoff and operating rules for Routa.
 > If you lost context, read this file first, then `README.md`, then run tests.
 >
 > Last updated: 2026-06-21 — after AI/LLM layer removal.
@@ -20,11 +20,11 @@ For operator-level context (personal profile, family rules, cross-project conven
 
 ---
 
-## 1. What Counta is
+## 1. What Routa is
 
-Counta is a personal/family double-entry bookkeeping PWA, currently live at `https://counta.avalone.online`.
+Routa is a personal/family double-entry bookkeeping PWA, currently live at `https://routa.avalone.online`.
 
-It is a **standalone application** under the `avalone.online` umbrella. The landing page at `https://avalone.online` simply lists available apps and links to them; Counta keeps its own users, database and UI.
+It is a **standalone application** under the `avalone.online` umbrella. The landing page at `https://avalone.online` simply lists available apps and links to them; Routa keeps its own users, database and UI.
 
 - **No AI / LLM / STT / vision.** The app was recently stripped of all AI features. Everything is deterministic.
 - **Own ledger.** It uses a private SQLite double-entry ledger, not ERPNext or any external accounting system.
@@ -34,8 +34,8 @@ It is a **standalone application** under the `avalone.online` umbrella. The land
 ### 1.1 avalone.online platform
 
 - `~/github-work/avalone-landing` — separate project that hosts the landing/catalog at `https://avalone.online`.
-- Counta does **not** depend on the landing; the landing only links to apps.
-- App switcher inside Counta uses the same app catalog and opens other apps via ordinary links (`window.location.href`).
+- Routa does **not** depend on the landing; the landing only links to apps.
+- App switcher inside Routa uses the same app catalog and opens other apps via ordinary links (`window.location.href`).
 
 ---
 
@@ -44,13 +44,13 @@ It is a **standalone application** under the `avalone.online` umbrella. The land
 | Layer | Tech | File(s) |
 |---|---|---|
 | Runtime | Python ≥3.13, managed with `uv` | `pyproject.toml`, `uv.lock` |
-| Web framework | FastAPI + Uvicorn | `src/counta/web/app.py` |
-| Frontend | Vanilla JS SPA inside one Jinja2 template | `src/counta/web/templates/app.html` |
-| Database | SQLite (`~/.counta/counta.db`) | `src/counta/core/sqlledger.py`, `src/counta/core/*.py` |
-| Auth | PBKDF2-HMAC-SHA256 passwords + signed `itsdangerous` session cookie | `src/counta/core/tenant.py`, `src/counta/core/security.py` |
-| i18n | Central glossary table | `src/counta/core/glossary.py` |
-| Currency | Live fiat + crypto conversion | `src/counta/core/currency.py` |
-| Email | SMTP (Gmail App Password) | `src/counta/core/notify.py` |
+| Web framework | FastAPI + Uvicorn | `src/routa/web/app.py` |
+| Frontend | Vanilla JS SPA inside one Jinja2 template | `src/routa/web/templates/app.html` |
+| Database | SQLite (`~/.routa/routa.db`) | `src/routa/core/sqlledger.py`, `src/routa/core/*.py` |
+| Auth | PBKDF2-HMAC-SHA256 passwords + signed `itsdangerous` session cookie | `src/routa/core/tenant.py`, `src/routa/core/security.py` |
+| i18n | Central glossary table | `src/routa/core/glossary.py` |
+| Currency | Live fiat + crypto conversion | `src/routa/core/currency.py` |
+| Email | SMTP (Gmail App Password) | `src/routa/core/notify.py` |
 | Tests | pytest + pytest-asyncio | `tests/` |
 
 Key dependencies: `fastapi`, `uvicorn[standard]`, `jinja2`, `sqlalchemy[asyncio]`, `pydantic-settings`, `itsdangerous`, `httpx`, `qrcode`, `aiogram` (legacy, currently unused).
@@ -60,7 +60,7 @@ Key dependencies: `fastapi`, `uvicorn[standard]`, `jinja2`, `sqlalchemy[asyncio]
 ## 3. Directory layout
 
 ```
-src/counta/
+src/routa/
 ├── core/                  # Business logic + data access (no HTTP)
 │   ├── sqlledger.py       # SQLite double-entry ledger (accounts, entries, lines, seq)
 │   ├── engine.py          # Async facade over sqlledger
@@ -123,7 +123,7 @@ Sign convention: `account_balance = SUM(debit) - SUM(credit)`. Positive = money 
 ### 4.2 Tenant isolation
 
 - `core/tenant.py` holds a `ContextVar[int]` (`_current`) for the current tenant id.
-- `web/app.py::auth_gate` reads the signed `counta_session` cookie and calls `tenant.set_current(tid)`.
+- `web/app.py::auth_gate` reads the signed `routa_session` cookie and calls `tenant.set_current(tid)`.
 - Almost every data-access function calls `tenant.require_current()` or embeds `tenant=?` in SQL.
 - Glossary and global settings are the only shared/instance-wide tables.
 
@@ -168,7 +168,7 @@ Rule: every user-visible string has a neutral alphanumeric key; languages are tr
 
 ## 5. API surface
 
-All API routers are mounted under `/api` in `src/counta/web/api/__init__.py`.
+All API routers are mounted under `/api` in `src/routa/web/api/__init__.py`.
 
 | Router | Key endpoints | Purpose |
 |---|---|---|
@@ -181,13 +181,13 @@ All API routers are mounted under `/api` in `src/counta/web/api/__init__.py`.
 | `admin.py` | `GET /admin/config`, `/admin/users`, `/admin/stats`; `POST /admin/config`, `/admin/constants` | Instance admin |
 | `misc.py` | `GET /me`; `POST /send-verify-code`, `/verify-email` | Profile & email verification |
 
-Page routes (login, register, recover, admin dashboard) live in `src/counta/web/app.py`.
+Page routes (login, register, recover, admin dashboard) live in `src/routa/web/app.py`.
 
 ---
 
 ## 6. Frontend patterns
 
-The frontend is in `src/counta/web/templates/app.html` (~2.3k lines, no framework).
+The frontend is in `src/routa/web/templates/app.html` (~2.3k lines, no framework).
 
 - **SPA pages:** `div#page-entry`, `#page-balances`, `#page-ai`, `#page-more`. Bottom tab bar switches visibility.
 - **State:** global JS variables (`FD`, `LANG`, `LAYOUT`, `jFilter`, `pending`, `modalStack`).
@@ -204,19 +204,19 @@ The frontend is in `src/counta/web/templates/app.html` (~2.3k lines, no framewor
 
 ### 7.1 Environment config
 
-`core/config.py` reads `COUNTA_*` env vars (and optional `.env`):
+`core/config.py` reads `ROUTA_*` env vars (and optional `.env`):
 
-- `COUNTA_FERNET_KEY` — required; signs session cookies.
-- `COUNTA_WEB_BASE_URL`, `COUNTA_WEB_HOST`, `COUNTA_WEB_PORT`.
-- `COUNTA_REGISTRATION_MODE` — `open` / `invite` / `closed`.
-- `COUNTA_REGISTRATION_INVITE_CODE`.
-- `COUNTA_STRICT_PASSWORD_POLICY`.
-- `COUNTA_SMTP_USER`, `COUNTA_SMTP_PASSWORD`, `COUNTA_SMTP_FROM` — optional email.
-- `COUNTA_DB_PATH` — optional; override the SQLite database path. Defaults to `~/.counta/counta.db`. Useful when running inside containers (e.g. PRoot) where the runtime `$HOME` differs from the persistent data directory.
+- `ROUTA_FERNET_KEY` — required; signs session cookies.
+- `ROUTA_WEB_BASE_URL`, `ROUTA_WEB_HOST`, `ROUTA_WEB_PORT`.
+- `ROUTA_REGISTRATION_MODE` — `open` / `invite` / `closed`.
+- `ROUTA_REGISTRATION_INVITE_CODE`.
+- `ROUTA_STRICT_PASSWORD_POLICY`.
+- `ROUTA_SMTP_USER`, `ROUTA_SMTP_PASSWORD`, `ROUTA_SMTP_FROM` — optional email.
+- `ROUTA_DB_PATH` — optional; override the SQLite database path. Defaults to `~/.routa/routa.db`. Useful when running inside containers (e.g. PRoot) where the runtime `$HOME` differs from the persistent data directory.
 
 ### 7.2 Runtime startup
 
-`app.on_event("startup")` (`src/counta/web/app.py::_ensure_catalog`):
+`app.on_event("startup")` (`src/routa/web/app.py::_ensure_catalog`):
 1. Ensures owner tenant exists.
 2. Seeds default categories for the owner.
 3. Seeds money registry from existing accounts.
@@ -226,10 +226,10 @@ The frontend is in `src/counta/web/templates/app.html` (~2.3k lines, no framewor
 ### 7.3 Production runtime
 
 Current prod runs on a Samsung Galaxy A30 (Termux + PRoot Ubuntu):
-- Counta web: tmux session `counta`, uvicorn on `127.0.0.1:8810`.
-- `COUNTA_DB_PATH=/data/data/com.termux/files/home/.counta/counta.db` so the database lives in persistent Termux home, not inside the ephemeral PRoot container rootfs.
+- Routa web: tmux session `routa`, uvicorn on `127.0.0.1:8810`.
+- `ROUTA_DB_PATH=/data/data/com.termux/files/home/.routa/routa.db` so the database lives in persistent Termux home, not inside the ephemeral PRoot container rootfs.
 - Public access: Cloudflare Tunnel session `cf`.
-- MacBook launchd agents (`online.avalone.counta-web`, `online.avalone.counta-tunnel`) are retired.
+- MacBook launchd agents (`online.avalone.routa-web`, `online.avalone.routa-tunnel`) are retired.
 
 See `denis-root-continuity/skills/infrastructure.md` for A30 access and service commands.
 
@@ -238,7 +238,7 @@ See `denis-root-continuity/skills/infrastructure.md` for A30 access and service 
 **Every change must pass `uv run python scripts/pre_flight.py` before deploy or merge.**
 
 The script checks:
-1. Python syntax for all `src/counta/*.py`.
+1. Python syntax for all `src/routa/*.py`.
 2. `pytest -q` all green.
 3. `scripts/check_i18n.py` green (ru/en/ko coverage, no untranslated strings).
 4. Inline JS in `app.html` parses without syntax errors (bun/node).
@@ -258,9 +258,9 @@ The script checks:
 
 ---
 
-## 9. Extending Counta / the Avalone ecosystem
+## 9. Extending Routa / the Avalone ecosystem
 
-The operator wants other Avalone apps to share users: register once at `avalone.online` and be logged into all apps (including Counta).
+The operator wants other Avalone apps to share users: register once at `avalone.online` and be logged into all apps (including Routa).
 
 ### 9.1 Recommended pattern: central identity portal
 
@@ -268,15 +268,15 @@ Build a small central auth service at `avalone.online`:
 
 - **OAuth2 / OpenID Connect provider** (or a lightweight cookie+JWT service).
 - Users register/login at `https://avalone.online/auth`.
-- Each app (Counta, future apps) becomes an OAuth2 client.
-- On first visit, Counta redirects to the portal; portal redirects back with a token/code.
-- Counta maps the portal user id to a local `tenant_id`. Existing Counta users can be linked by email or by a one-time migration.
+- Each app (Routa, future apps) becomes an OAuth2 client.
+- On first visit, Routa redirects to the portal; portal redirects back with a token/code.
+- Routa maps the portal user id to a local `tenant_id`. Existing Routa users can be linked by email or by a one-time migration.
 
 ### 9.2 What the portal needs at minimum
 
 No marketing site is required. The portal can be just:
 - `/login` and `/register` pages.
-- A tiny logged-in dashboard listing connected apps (Counta + future ones).
+- A tiny logged-in dashboard listing connected apps (Routa + future ones).
 - Logout / session management.
 
 Later, a public landing page can be added without changing the auth flow.
@@ -289,11 +289,11 @@ Later, a public landing page can be added without changing the auth flow.
 | Shared user DB + JWT | Simpler if all apps are on the same infrastructure | Tight coupling; schema changes hurt everyone |
 | Per-app DB with user sync events | Apps stay autonomous | Eventual consistency; conflict resolution needed |
 
-### 9.4 Counta changes needed
+### 9.4 Routa changes needed
 
 1. Replace local password login with OAuth2 callback handler.
 2. Keep `tenant_id` internally, but add `portal_user_id` column to `users`.
-3. Keep session cookie signed by Counta, but seed it from the portal token instead of local password check.
+3. Keep session cookie signed by Routa, but seed it from the portal token instead of local password check.
 4. Keep tenant isolation logic unchanged — it already scopes all data by user id.
 
 ---
@@ -319,7 +319,7 @@ Later, a public landing page can be added without changing the auth flow.
 
 ## 12. Safety
 
-- Do not put secrets in code or logs; use `~/infrastructure-secrets.env` / `~/counta-secrets.env`.
-- Do not modify or delete `~/.counta/counta.db` without a backup.
+- Do not put secrets in code or logs; use `~/infrastructure-secrets.env` / `~/routa-secrets.env`.
+- Do not modify or delete `~/.routa/routa.db` without a backup.
 - Do not run Docker commands for ERPNext — it is gone.
 - Any ledger change must keep `assert_balanced()` true.
