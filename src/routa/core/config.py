@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     web_host: str = "127.0.0.1"
     web_port: int = 8810
 
+    # Avalone SSO (shared signed cookie)
+    avalone_fernet_key: str = ""
+    avalone_base_url: str = "https://avalone.online"
+    avalone_cookie_name: str = "avalone_session"
+
     # PWA login (personal phase: один пароль; мультиюзер — отдельная итерация)
     web_password: str = ""
     # Регистрация: "open" — любой создаёт аккаунт; "invite" — только с кодом

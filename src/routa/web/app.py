@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
-from routa.core import app_access, config, constants, db, notify, security, tenant
+from routa.core import app_access, config, constants, db, external_auth, notify, security, tenant
 from routa.core.config import settings
 from routa.web.api import router as api_router
 
@@ -128,13 +128,17 @@ async def auth_gate(request: Request, call_next):
                   "/icon.svg", "/icon-192.png", "/icon-512.png",
                   "/api/version", "/api/apps", "/qr"}
     tid = _tenant_of(request)
+    if not tid:
+        avalone_uid = external_auth.user_id_of(request)
+        if avalone_uid:
+            tid = external_auth.get_or_create_tenant(avalone_uid)
     # КАЖДЫЙ запрос ставит текущего тенанта в contextvar — все запросы к БД
     # фильтруются по нему (изоляция данных между пользователями).
     tenant.set_current(tid)
     if request.url.path not in open_paths and not tid:
         if request.url.path.startswith("/api"):
             return JSONResponse({"error": "unauthorized"}, status_code=401)
-        return RedirectResponse("/login", status_code=303)
+        return RedirectResponse(_avalone_login_url(request), status_code=303)
     return await call_next(request)
 
 
@@ -145,9 +149,17 @@ def _issue_session(tid: int) -> RedirectResponse:
     return resp
 
 
-@app.get("/login", response_class=HTMLResponse)
+def _avalone_login_url(request: Request) -> str:
+    next_url = str(request.url)
+    return f"{settings().avalone_base_url}/login?next={next_url}"
+
+
+@app.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse(request, "login.html", {})
+    # Default login now happens at Avalone. Optional fallback via ?fallback=1.
+    if request.query_params.get("fallback"):
+        return templates.TemplateResponse(request, "login.html", {})
+    return RedirectResponse(_avalone_login_url(request), status_code=303)
 
 
 def _client_ip(request: Request) -> str:
@@ -206,13 +218,16 @@ async def admin_dashboard(request: Request):
     }))
 
 
-@app.get("/register", response_class=HTMLResponse)
+@app.get("/register")
 async def register_page(request: Request):
-    if config.registration_mode() == "closed":
-        return templates.TemplateResponse(request, "login.html",
-            {"error": "Регистрация закрыта"})
-    invite = config.registration_mode() == "invite"
-    return templates.TemplateResponse(request, "login.html", {"register": True, "invite": invite})
+    # Registration now happens at Avalone. Optional fallback via ?fallback=1.
+    if request.query_params.get("fallback"):
+        if config.registration_mode() == "closed":
+            return templates.TemplateResponse(request, "login.html",
+                {"error": "Регистрация закрыта"})
+        invite = config.registration_mode() == "invite"
+        return templates.TemplateResponse(request, "login.html", {"register": True, "invite": invite})
+    return RedirectResponse(f"{settings().avalone_base_url}/register", status_code=303)
 
 
 @app.post("/register")
