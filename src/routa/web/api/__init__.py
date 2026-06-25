@@ -16,6 +16,7 @@ from routa.web.api import (
     form,
     misc,
     notifications,
+    rides,
     settings,
 )
 from routa.web.api.common import (
@@ -39,6 +40,7 @@ router.include_router(admin.router)
 router.include_router(misc.router)
 router.include_router(notifications.router)
 router.include_router(app_access.router)
+router.include_router(rides.router)
 
 __all__ = [
     "router",

@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
-from routa.core import app_access, config, constants, db, external_auth, notify, security, tenant
+from routa.core import app_access, config, constants, db, external_auth, notify, rides, security, tenant
 from routa.core.config import settings
 from routa.web.api import router as api_router
 
@@ -451,6 +451,15 @@ def _no_cache(resp):
 @app.get("/", response_class=HTMLResponse)
 async def app_page(request: Request):
     return _no_cache(templates.TemplateResponse(request, "app.html", {"build_id": BUILD_ID}))
+
+
+@app.get("/join/{invite_code}")
+async def join_by_invite(request: Request, invite_code: str):
+    try:
+        rides.join_trip_by_code(invite_code)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=404)
+    return RedirectResponse("/", status_code=303)
 
 
 @app.get("/manifest.json")

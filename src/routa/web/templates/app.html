@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark light">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<title>Routa</title>
+<title>Work — Avalone</title>
 <script>
 /* применяем тему ДО рендера (без мигания): localStorage — мгновенно, сервер — позже */
 (function(){try{var t=localStorage.getItem('routa_theme');
@@ -122,6 +122,23 @@ select,input[type=number],input[type=text],input[type=password],input[type=email
 .acc>summary .badge{font-size:12px;color:var(--amber);font-weight:400}
 .acc-body{padding:0 16px 16px}
 .opt-disabled{opacity:.55;font-style:italic;color:var(--muted)}
+/* Work ride MVP */
+.trip-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.trip-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.trip-title{font-size:16px;font-weight:600;margin:0}
+.trip-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.trip-badge{font-size:11px;font-weight:600;text-transform:uppercase;border-radius:8px;padding:3px 8px}
+.trip-badge.to_work{background:rgba(88,166,255,.15);color:var(--accent)}
+.trip-badge.from_work{background:rgba(63,185,80,.15);color:var(--green)}
+.member-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.member-row:first-child{border-top:none}
+.member-name{font-size:14px;font-weight:500}
+.member-role{font-size:12px;color:var(--muted)}
+.role-btns{display:flex;gap:6px;flex-wrap:wrap}
+.role-btn{font-size:12px;padding:6px 10px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--txt);cursor:pointer}
+.role-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.role-btn.danger.active{background:var(--red);border-color:var(--red)}
+.empty-state{text-align:center;color:var(--muted);padding:30px 10px}
 </style>
 </head>
 <body>
@@ -157,12 +174,56 @@ select,input[type=number],input[type=text],input[type=password],input[type=email
   <div id="install-ios-hint" class="small" style="display:none;margin-top:6px;color:var(--muted)" data-i="install_ios_hint">Нажмите «Поделиться» → «На экран Home»</div>
 </div>
 
-<div class="card" style="margin:12px 16px 0;padding:18px 14px;text-align:center">
-  <div style="font-size:42px;margin-bottom:10px">🚐</div>
-  <h2 style="margin:0 0 8px;font-size:18px">Routa</h2>
-  <p class="small" style="color:var(--muted);margin:0" data-i="routa_coming">Управление поездками людей на работу.<br>Приложение в разработке.</p>
+<div class="card" style="margin:12px 16px 0;padding:16px 14px">
+  <div class="row" style="align-items:center;gap:12px;margin-bottom:10px">
+    <div style="font-size:32px">🛠️</div>
+    <div>
+      <h2 style="margin:0;font-size:18px">Work</h2>
+      <p class="small" style="margin:2px 0 0;color:var(--muted)">Рабочая координация</p>
+    </div>
+  </div>
+  <p class="small" style="color:var(--muted);margin:0 0 12px" data-i="work_mvp_hint">Пока активны только поездки. Смены, задачи и команда — в разработке.</p>
+  <button class="btn btn-primary" onclick="openTripForm()" data-i="work_new_trip">+ Создать поездку</button>
 </div>
+
+<div id="trips-list"></div>
+
 </div><!-- /page-entry -->
+
+<!-- МОДАЛ: создание поездки -->
+<div class="overlay" id="trip-form-overlay">
+  <div class="sheet">
+    <div class="sheet-grip"></div>
+    <div class="sheet-head"><b data-i="work_new_trip">Создать поездку</b>
+      <button class="x" onclick="closeTripForm()">×</button></div>
+    <label data-i="work_direction">Направление</label>
+    <select id="trip-direction">
+      <option value="to_work" data-i="work_to_work">На работу</option>
+      <option value="from_work" data-i="work_from_work">С работы</option>
+    </select>
+    <label data-i="work_date">Дата</label>
+    <input type="date" id="trip-date">
+    <label data-i="work_time">Время</label>
+    <input type="time" id="trip-time">
+    <div class="sheet-footer">
+      <button class="btn btn-primary" onclick="createTrip()" data-i="work_create">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛ: приглашение -->
+<div class="overlay" id="invite-overlay">
+  <div class="sheet">
+    <div class="sheet-grip"></div>
+    <div class="sheet-head"><b data-i="work_invite">Приглашение</b>
+      <button class="x" onclick="closeInvite()">×</button></div>
+    <p class="small" data-i="work_invite_hint">Отправьте ссылку — человек сможет присоединиться после входа в Avalone.</p>
+    <input type="text" id="invite-link" readonly onclick="this.select()">
+    <div class="sheet-footer">
+      <button class="btn btn-primary" onclick="copyInvite()" data-i="work_copy">Копировать</button>
+    </div>
+  </div>
+</div>
 
 
 <!-- МАСТЕР НАЧАЛА РАБОТЫ: пошаговый экскурс для нового пользователя -->
@@ -2054,6 +2115,15 @@ let I18N = {
    cat_left:'разобрана и удалена',cat_not_empty_open:'Открыть разбор?',
    widget_balances:'💰 Остатки',widget_journal:'🧾 Последние',
    routa_coming:'Управление поездками людей на работу. Приложение в разработке.',
+   work_mvp_hint:'Пока активны только поездки. Смены, задачи и команда — в разработке.',
+   work_new_trip:'+ Создать поездку',work_direction:'Направление',work_date:'Дата',work_time:'Время',
+   work_create:'Создать',work_to_work:'На работу',work_from_work:'С работы',work_invite:'Пригласить',
+   work_invite_hint:'Отправьте ссылку — человек сможет присоединиться после входа в Avalone.',
+   work_copy:'Копировать',work_copied:'Ссылка скопирована',work_close:'Закрыть',
+   work_driver:'Водитель',work_passenger:'Пассажир',work_not_going:'Не еду',
+   work_members:'{n} участников',work_drivers:'Водители',work_passengers:'Пассажиры',
+   work_load_error:'Не удалось загрузить поездки',work_no_trips:'Пока нет поездок. Создайте первую.',
+   work_fill_fields:'Укажите дату и время',
    routa_ai_coming:'Аналитика поездок появится позже.',
    verify_email_title:'Подтвердите email',verify_email_body:'Мы отправили код на ',verify_email_placeholder:'000000',
    verify_email_button:'Подтвердить',verify_email_resend:'Отправить повторно',verify_email_sent:'Код отправлен. Проверьте почту.',
@@ -2173,6 +2243,15 @@ let I18N = {
    cat_left:'sorted out and deleted',cat_not_empty_open:'Open sort-out?',
    widget_balances:'💰 Balances',widget_journal:'🧾 Recent',
    routa_coming:'People commute management. The app is under development.',
+   work_mvp_hint:'Only rides are active now. Shifts, tasks and team features are coming.',
+   work_new_trip:'+ New ride',work_direction:'Direction',work_date:'Date',work_time:'Time',
+   work_create:'Create',work_to_work:'To work',work_from_work:'From work',work_invite:'Invite',
+   work_invite_hint:'Share the link — the person will join after signing in to Avalone.',
+   work_copy:'Copy',work_copied:'Link copied',work_close:'Close',
+   work_driver:'Driver',work_passenger:'Passenger',work_not_going:'Not going',
+   work_members:'{n} members',work_drivers:'Drivers',work_passengers:'Passengers',
+   work_load_error:'Failed to load rides',work_no_trips:'No rides yet. Create the first one.',
+   work_fill_fields:'Please fill date and time',
    routa_ai_coming:'Trip analytics will appear later.',
    verify_email_title:'Verify email',verify_email_body:'We sent a code to ',verify_email_placeholder:'000000',
    verify_email_button:'Verify',verify_email_resend:'Send again',verify_email_sent:'Code sent. Check your email.',
@@ -2291,6 +2370,15 @@ let I18N = {
    cat_left:'정리 후 삭제됨',cat_not_empty_open:'정리를 열까요?',
    widget_balances:'💰 잔액',widget_journal:'🧾 최근',
    routa_coming:'출퇴근 인원 운송 관리. 앱을 개발 중입니다.',
+   work_mvp_hint:'현재는 이동 기능만 활성화되어 있습니다. 교대, 작업, 팀 기능은 준비 중입니다.',
+   work_new_trip:'+ 이동 만들기',work_direction:'방향',work_date:'날짜',work_time:'시간',
+   work_create:'만들기',work_to_work:'출근',work_from_work:'퇴근',work_invite:'초대',
+   work_invite_hint:'링크를 공유하세요 — 상대방은 Avalone에 로그인한 후 참여할 수 있습니다.',
+   work_copy:'복사',work_copied:'링크 복사됨',work_close:'닫기',
+   work_driver:'운전자',work_passenger:'탑승자',work_not_going:'미참석',
+   work_members:'{n}명 참여',work_drivers:'운전자',work_passengers:'탑승자',
+   work_load_error:'이동을 불러올 수 없습니다',work_no_trips:'이동이 없습니다. 첫 이동을 만들어보세요.',
+   work_fill_fields:'날짜와 시간을 입력하세요',
    routa_ai_coming:'이동 분석은 추후 제공됩니다.',
    verify_email_title:'이메일 인증',verify_email_body:'인증 코드를 전송했습니다: ',verify_email_placeholder:'000000',
    verify_email_button:'인증',verify_email_resend:'다시 본내기',verify_email_sent:'코드를 별냈습니다. 메일을 확인하세요.',
@@ -2456,6 +2544,78 @@ async function bootGlossary(){
   const s = await (await fetch('/api/settings')).json();
   LAYOUT = parseLayout(s.layout || 'quick:1,balances:1,journal:1');
   const storedLang = s.lang || 'auto';
+  // --- Work ride MVP ---
+  const roleLabels = {driver:'Водитель',passenger:'Пассажир',not_going:'Не еду',unknown:'-'}
+  const dirLabels = {to_work:'На работу',from_work:'С работы'}
+  function fmtDate(d){
+    const [y,m,day]=d.split('-'); return `${day}.${m}.${y}`
+  }
+  async function loadTrips(){
+    const list=$('trips-list'); if(!list) return
+    try{
+      const res=await fetch('/api/trips');
+      const data=await res.json();
+      renderTrips(data.trips||[])
+    }catch(e){ list.innerHTML='<div class="empty-state">'+T('work_load_error')+'</div>' }
+  }
+  function renderTrips(trips){
+    const list=$('trips-list');
+    if(!trips.length){ list.innerHTML='<div class="empty-state">'+T('work_no_trips')+'</div>'; return }
+    list.innerHTML=trips.map(t=>{
+      const drivers=t.members.filter(m=>m.role==='driver')
+      const passengers=t.members.filter(m=>m.role==='passenger')
+      const notGoing=t.members.filter(m=>m.role==='not_going')
+      return `<div class="trip-card">
+        <div class="trip-head">
+          <div>
+            <div class="trip-title">${escapeHtml(dirLabels[t.direction]||t.direction)} · ${escapeHtml(fmtDate(t.trip_date))}</div>
+            <div class="trip-meta">${escapeHtml(t.trip_time)} · ${escapeHtml(T('work_members').replace('{n}', t.members.length))}</div>
+          </div>
+          <span class="trip-badge ${t.direction}">${escapeHtml(dirLabels[t.direction]||t.direction)}</span>
+        </div>
+        <div class="small" style="margin-bottom:8px">${escapeHtml(T('work_drivers'))}: ${drivers.length? drivers.map(d=>d.login.replace(/^avalone_/,'')).join(', '):'-'} · ${escapeHtml(T('work_passengers'))}: ${passengers.length} · ${escapeHtml(T('work_not_going'))}: ${notGoing.length}</div>
+        <div style="margin-bottom:10px">${t.members.map(m=>renderMemberRow(t.id,m)).join('')}</div>
+        <div class="row" style="gap:8px">
+          <button class="btn btn-ghost" style="flex:1;font-size:13px;padding:8px" onclick="openInvite(${t.id},'${t.invite_code}')">${T('work_invite')}</button>
+          <button class="btn btn-ghost" style="font-size:13px;padding:8px" onclick="closeTrip(${t.id})">${T('work_close')}</button>
+        </div>
+      </div>`
+    }).join('')
+  }
+  function renderMemberRow(tripId,m){
+    const name=m.login.replace(/^avalone_/,'')
+    return `<div class="member-row">
+      <div><div class="member-name">${escapeHtml(name)}</div><div class="member-role">${escapeHtml(roleLabels[m.role]||m.role)}</div></div>
+      <div class="role-btns">
+        <button class="role-btn ${m.role==='driver'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'driver')">${T('work_driver')}</button>
+        <button class="role-btn ${m.role==='passenger'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'passenger')">${T('work_passenger')}</button>
+        <button class="role-btn danger ${m.role==='not_going'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'not_going')">${T('work_not_going')}</button>
+      </div>
+    </div>`
+  }
+  async function setRole(tripId,memberTid,role){
+    await fetch(`/api/trips/${tripId}/members/${memberTid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})})
+    loadTrips()
+  }
+  function openTripForm(){ $('trip-form-overlay').classList.add('show');
+    const d=new Date(); $('trip-date').value=d.toISOString().slice(0,10)
+    $('trip-time').value='08:00'
+  }
+  function closeTripForm(){ $('trip-form-overlay').classList.remove('show') }
+  async function createTrip(){
+    const direction=$('trip-direction').value, date=$('trip-date').value, time=$('trip-time').value
+    if(!date||!time){ toast(T('work_fill_fields')); return }
+    await fetch('/api/trips',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({direction,date,time})})
+    closeTripForm(); loadTrips()
+  }
+  let currentInviteCode=''
+  function openInvite(tripId,code){ currentInviteCode=code; const url=`${location.origin}/join/${code}`; $('invite-link').value=url; $('invite-overlay').classList.add('show') }
+  function closeInvite(){ $('invite-overlay').classList.remove('show') }
+  function copyInvite(){ navigator.clipboard.writeText($('invite-link').value).then(()=>toast(T('work_copied'))) }
+  async function closeTrip(tripId){ await fetch(`/api/trips/${tripId}/close`,{method:'POST'}); loadTrips() }
+  window.openTripForm=openTripForm; window.closeTripForm=closeTripForm; window.createTrip=createTrip;
+  window.setRole=setRole; window.openInvite=openInvite; window.closeInvite=closeInvite; window.copyInvite=copyInvite; window.closeTrip=closeTrip
+
   applyLang(storedLang);
   showInstallBanner();
   const langSel = $('set-lang'); if(langSel) langSel.value = storedLang;
@@ -2469,6 +2629,7 @@ async function bootGlossary(){
   await loadFormData(); kanban(0); opChanged(); applyLayout();
   loadVerifyBanner();  // показать баннер подтверждения email, если нужно
   maybeAutoWizard();   // новому пользователю — экскурс (один раз, пер-юзерно)
+  loadTrips();         // Work ride MVP
 })();
 </script>
 </body>
