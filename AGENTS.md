@@ -26,10 +26,10 @@ Routa is a work-in-progress app for organizing people commute / work trips. It i
 
 The codebase was bootstrapped as a copy of Counta, so the backend still contains the same double-entry ledger, accounts, categories and journal machinery. Those screens are hidden or will be reworked into trip-management flows as the product evolves.
 
-It is a **standalone application** under the `avalone.online` umbrella. The landing page at `https://avalone.online` simply lists available apps and links to them; Routa keeps its own users, database and UI.
+It is a **standalone UI** under the `avalone.online` umbrella. The landing page at `https://avalone.online` simply lists available apps and links to them. Authentication and the database are shared through `avalone_core`.
 
 - **No AI / LLM / STT / vision.** Everything is deterministic.
-- **Own database.** SQLite at `~/.routa/routa.db`; currently it still uses Counta-style ledger tables.
+- **Shared database.** Unified Avalone SQLite at `~/.avalone/avalone.db`, tables with `work_*` prefix.
 - **i18n-first.** User-facing strings are stored in a central glossary with `ru`, `en`, `ko` translations.
 
 ### 1.1 avalone.online platform
@@ -47,8 +47,8 @@ It is a **standalone application** under the `avalone.online` umbrella. The land
 | Runtime | Python ≥3.13, managed with `uv` | `pyproject.toml`, `uv.lock` |
 | Web framework | FastAPI + Uvicorn | `src/routa/web/app.py` |
 | Frontend | Vanilla JS SPA inside one Jinja2 template | `src/routa/web/templates/app.html` |
-| Database | SQLite (`~/.routa/routa.db`) | `src/routa/core/sqlledger.py`, `src/routa/core/*.py` |
-| Auth | PBKDF2-HMAC-SHA256 passwords + signed `itsdangerous` session cookie | `src/routa/core/tenant.py`, `src/routa/core/security.py` |
+| Database | Unified Avalone SQLite (`~/.avalone/avalone.db`), prefix `work_*` | `src/routa/core/db.py`, `avalone_core.db` |
+| Auth | Avalone SSO via shared signed `avalone_session` cookie | `src/routa/core/external_auth.py`, `src/routa/core/tenant.py` |
 | i18n | Central glossary table | `src/routa/core/glossary.py` |
 | Currency | Live fiat + crypto conversion | `src/routa/core/currency.py` |
 | Email | SMTP (Gmail App Password) | `src/routa/core/notify.py` |
@@ -214,7 +214,7 @@ The frontend is in `src/routa/web/templates/app.html` (~2.3k lines, no framework
 - `ROUTA_REGISTRATION_INVITE_CODE`.
 - `ROUTA_STRICT_PASSWORD_POLICY`.
 - `ROUTA_SMTP_USER`, `ROUTA_SMTP_PASSWORD`, `ROUTA_SMTP_FROM` — optional email.
-- `ROUTA_DB_PATH` — optional; override the SQLite database path. Defaults to `~/.routa/routa.db`. Useful when running inside containers (e.g. PRoot) where the runtime `$HOME` differs from the persistent data directory.
+- `AVALONE_DB_PATH` — optional; override the unified SQLite database path. Defaults to `~/.avalone/avalone.db`. Useful when running inside containers (e.g. PRoot) where the runtime `$HOME` differs from the persistent data directory.
 
 ### 7.2 Runtime startup
 
@@ -230,7 +230,7 @@ The frontend is in `src/routa/web/templates/app.html` (~2.3k lines, no framework
 Current prod runs on the MacBook via `launchd` agents managed by the operator:
 - Routa web: `online.avalone.routa-web`, uvicorn on `127.0.0.1:8812`.
 - Cloudflare tunnel: `online.avalone.routa-tunnel` exposes `https://routa.avalone.online` via a wildcard `*.avalone.online` CNAME.
-- Database: `~/.routa/routa.db` (SQLite). Override with `ROUTA_DB_PATH` if the runtime `$HOME` differs from the persistent data directory (e.g. inside containers).
+- Database: `~/.avalone/avalone.db` (unified SQLite). Override with `AVALONE_DB_PATH` if the runtime `$HOME` differs from the persistent data directory (e.g. inside containers).
 
 The earlier experiment with Samsung Galaxy A30 (Termux + PRoot Ubuntu) is no longer active.
 
@@ -323,6 +323,6 @@ Later, a public landing page can be added without changing the auth flow.
 ## 12. Safety
 
 - Do not put secrets in code or logs; use `~/infrastructure-secrets.env` / `~/routa-secrets.env`.
-- Do not modify or delete `~/.routa/routa.db` without a backup.
+- Do not modify or delete `~/.avalone/avalone.db` without a backup.
 - Do not run Docker commands for ERPNext — it is gone.
 - Any ledger change must keep `assert_balanced()` true.
