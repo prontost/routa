@@ -10,7 +10,7 @@
 словесные ключи категорий (`Groceries` -> `cat_groceries`).
 
 Таблица:
-    glossary(key TEXT PK, ru TEXT, en TEXT, ko TEXT, kind TEXT)
+    work_glossary(key TEXT PK, ru TEXT, en TEXT, ko TEXT, kind TEXT)
 - key  — цифробуквенный (f_category, edit_incomes, cur_usd, ...)
 - ru/en/ko — переводы; пусто = ключ ещё не переведён на этот язык
 - kind — группа (ui | category | currency | notif | ...) для будущей навигации
@@ -23,7 +23,7 @@ from routa.core.db import DB_PATH
 LANGS = ("ru", "en", "ko")
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS glossary (
+CREATE TABLE IF NOT EXISTS work_glossary (
     key  TEXT PRIMARY KEY,
     ru   TEXT,
     en   TEXT,
@@ -41,9 +41,9 @@ def _conn() -> sqlite3.Connection:
     con = sqlite3.connect(DB_PATH)
     con.executescript(_SCHEMA)
     # миграция: добить desc на старых БД, где колонки не было
-    cols = {r[1] for r in con.execute("PRAGMA table_info(glossary)")}
+    cols = {r[1] for r in con.execute("PRAGMA table_info(work_glossary)")}
     if "desc" not in cols:
-        con.execute("ALTER TABLE glossary ADD COLUMN desc TEXT DEFAULT ''")
+        con.execute("ALTER TABLE work_glossary ADD COLUMN desc TEXT DEFAULT ''")
     return con
 
 
@@ -63,14 +63,14 @@ def upsert_many(rows: list[dict]) -> int:
             desc = r.get("desc")
             if desc is None:
                 con.execute(
-                    "INSERT INTO glossary (key, ru, en, ko, kind, desc) VALUES (?,?,?,?,?,'') "
+                    "INSERT INTO work_glossary (key, ru, en, ko, kind, desc) VALUES (?,?,?,?,?,'') "
                     "ON CONFLICT(key) DO UPDATE SET ru=excluded.ru, en=excluded.en, "
                     "ko=excluded.ko, kind=excluded.kind",
                     (r["key"], r.get("ru", ""), r.get("en", ""), r.get("ko", ""),
                      r.get("kind", "ui")))
             else:
                 con.execute(
-                    "INSERT INTO glossary (key, ru, en, ko, kind, desc) VALUES (?,?,?,?,?,?) "
+                    "INSERT INTO work_glossary (key, ru, en, ko, kind, desc) VALUES (?,?,?,?,?,?) "
                     "ON CONFLICT(key) DO UPDATE SET ru=excluded.ru, en=excluded.en, "
                     "ko=excluded.ko, kind=excluded.kind, desc=excluded.desc",
                     (r["key"], r.get("ru", ""), r.get("en", ""), r.get("ko", ""),
@@ -81,7 +81,7 @@ def upsert_many(rows: list[dict]) -> int:
 def set_desc(key: str, desc: str) -> None:
     """Задать/исправить метаописание ключа (для редактора глоссария / правок)."""
     with _conn() as con:
-        con.execute("UPDATE glossary SET desc=? WHERE key=?", (desc, key))
+        con.execute("UPDATE work_glossary SET desc=? WHERE key=?", (desc, key))
 
 
 def all_by_lang() -> dict[str, dict[str, str]]:
@@ -89,7 +89,7 @@ def all_by_lang() -> dict[str, dict[str, str]]:
     out: dict[str, dict[str, str]] = {l: {} for l in LANGS}
     with _conn() as con:
         for key, ru, en, ko, _ in con.execute(
-                "SELECT key, ru, en, ko, kind FROM glossary"):
+                "SELECT key, ru, en, ko, kind FROM work_glossary"):
             vals = {"ru": ru, "en": en, "ko": ko}
             for l in LANGS:
                 if vals[l]:
@@ -100,7 +100,7 @@ def all_by_lang() -> dict[str, dict[str, str]]:
 def get(key: str, lang: str = "ru") -> str:
     """Перевод ключа на язык; фолбэк ru -> en -> сам ключ."""
     with _conn() as con:
-        row = con.execute("SELECT ru, en, ko FROM glossary WHERE key=?", (key,)).fetchone()
+        row = con.execute("SELECT ru, en, ko FROM work_glossary WHERE key=?", (key,)).fetchone()
     if not row:
         return key
     vals = {"ru": row[0], "en": row[1], "ko": row[2]}
@@ -112,7 +112,7 @@ def entries() -> list[dict]:
     [{key, ru, en, ko, kind, desc}, ...]. desc — контекст для осмысленного перевода."""
     with _conn() as con:
         rows = con.execute(
-            "SELECT key, ru, en, ko, kind, desc FROM glossary ORDER BY kind, key").fetchall()
+            "SELECT key, ru, en, ko, kind, desc FROM work_glossary ORDER BY kind, key").fetchall()
     return [{"key": r[0], "ru": r[1], "en": r[2], "ko": r[3],
              "kind": r[4], "desc": r[5] or ""} for r in rows]
 
@@ -120,7 +120,7 @@ def entries() -> list[dict]:
 def describe(key: str) -> str:
     """Метаописание ключа (контекст). Пусто, если ещё не задано."""
     with _conn() as con:
-        row = con.execute("SELECT desc FROM glossary WHERE key=?", (key,)).fetchone()
+        row = con.execute("SELECT desc FROM work_glossary WHERE key=?", (key,)).fetchone()
     return (row[0] if row and row[0] else "")
 
 
@@ -128,9 +128,9 @@ def missing_desc() -> list[str]:
     """Ключи без метаописания — что осталось описать для качественного ИИ-перевода."""
     with _conn() as con:
         return [r[0] for r in con.execute(
-            "SELECT key FROM glossary WHERE desc IS NULL OR desc='' ORDER BY kind, key")]
+            "SELECT key FROM work_glossary WHERE desc IS NULL OR desc='' ORDER BY kind, key")]
 
 
 def count() -> int:
     with _conn() as con:
-        return con.execute("SELECT COUNT(*) FROM glossary").fetchone()[0]
+        return con.execute("SELECT COUNT(*) FROM work_glossary").fetchone()[0]

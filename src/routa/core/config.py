@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # Подпись session-cookie (+ шифрование секретов, если понадобится)
     fernet_key: str
-    web_base_url: str = "https://routa.avalone.online"
+    web_base_url: str = "https://work.avalone.online"
     web_host: str = "127.0.0.1"
     web_port: int = 8810
 

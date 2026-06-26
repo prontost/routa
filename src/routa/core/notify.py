@@ -1,7 +1,7 @@
 """User settings (SQLite) + outbound e-mail channel.
 
 Push-уведомления и недельный итог удалены 2026-06-18 (нечего слать). Остались:
-- user_settings (per-tenant): язык, раскладка главной, e-mail.
+- work_user_settings (per-tenant): язык, раскладка главной, e-mail.
 - _send_email: единственный исходящий канал — нужен для восстановления
   логина/пароля по почте и кодов подтверждения (security.py).
 """
@@ -18,7 +18,7 @@ from routa.core.config import settings as cfg
 log = logging.getLogger(__name__)
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS user_settings (
+CREATE TABLE IF NOT EXISTS work_user_settings (
     tenant INTEGER NOT NULL DEFAULT 1,
     key TEXT NOT NULL,
     value TEXT NOT NULL,
@@ -48,15 +48,15 @@ def _conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB_PATH)
     con.executescript(_SCHEMA)
-    cols = {r[1] for r in con.execute("PRAGMA table_info(user_settings)")}
+    cols = {r[1] for r in con.execute("PRAGMA table_info(work_user_settings)")}
     if "tenant" not in cols:
-        con.execute("ALTER TABLE user_settings ADD COLUMN tenant INTEGER NOT NULL DEFAULT 1")
+        con.execute("ALTER TABLE work_user_settings ADD COLUMN tenant INTEGER NOT NULL DEFAULT 1")
     return con
 
 
 def get_settings() -> dict:
     with _conn() as con:
-        rows = dict(con.execute("SELECT key, value FROM user_settings WHERE tenant=?",
+        rows = dict(con.execute("SELECT key, value FROM work_user_settings WHERE tenant=?",
                                 (_tid(),)).fetchall())
     return {**DEFAULTS, **rows}
 
@@ -68,7 +68,7 @@ def set_settings(updates: dict) -> dict:
         for k, v in updates.items():
             if k in allowed:
                 con.execute(
-                    "INSERT INTO user_settings (tenant, key, value) VALUES (?,?,?) "
+                    "INSERT INTO work_user_settings (tenant, key, value) VALUES (?,?,?) "
                     "ON CONFLICT(tenant, key) DO UPDATE SET value=excluded.value",
                     (tid, k, str(v)))
     return get_settings()

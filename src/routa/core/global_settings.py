@@ -9,7 +9,7 @@ from routa.core.db import DB_PATH
 from routa.core import tenant
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS global_settings (
+CREATE TABLE IF NOT EXISTS work_global_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
@@ -22,7 +22,7 @@ DEFAULTS = {
     "registration_invite_code": "",
     "strict_password_policy": "false",
     "default_currency": "KRW",
-    "web_base_url": "https://routa.avalone.online",
+    "web_base_url": "https://work.avalone.online",
 }
 
 
@@ -36,7 +36,7 @@ def _conn() -> sqlite3.Connection:
 def get(key: str) -> str | None:
     """Return stored value or None if the key has never been set in DB."""
     with _conn() as con:
-        r = con.execute("SELECT value FROM global_settings WHERE key=?", (key,)).fetchone()
+        r = con.execute("SELECT value FROM work_global_settings WHERE key=?", (key,)).fetchone()
     return r[0] if r else None
 
 
@@ -46,7 +46,7 @@ def set(key: str, value: str) -> None:
         raise PermissionError("only admins can change global settings")
     with _conn() as con:
         con.execute(
-            "INSERT INTO global_settings (key, value) VALUES (?,?) "
+            "INSERT INTO work_global_settings (key, value) VALUES (?,?) "
             "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
             (key, str(value)),
         )
@@ -54,5 +54,5 @@ def set(key: str, value: str) -> None:
 
 def get_all() -> dict:
     with _conn() as con:
-        rows = dict(con.execute("SELECT key, value FROM global_settings").fetchall())
+        rows = dict(con.execute("SELECT key, value FROM work_global_settings").fetchall())
     return {**DEFAULTS, **rows}

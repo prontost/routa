@@ -3,11 +3,11 @@
 Реестр приложений (KNOWN_APPS) живёт в коде: новое приложение добавляется
 сюда, и админ может включить/выключить доступ конкретным пользователям.
 По умолчанию публичные приложения (public=True) доступны всем; отключение
-записывается в user_apps и скрывает приложение из переключателя.
+записывается в work_user_apps и скрывает приложение из переключателя.
 
-Таблица user_apps ссылается на users с ON DELETE CASCADE, но из-за того, что
+Таблица work_user_apps ссылается на users с ON DELETE CASCADE, но из-за того, что
 SQLite по умолчанию не включает foreign_keys, tenant.delete_user явно чистит
-user_apps (и notifications) вместе с пользователем.
+work_user_apps (и notifications) вместе с пользователем.
 """
 
 import sqlite3
@@ -29,19 +29,19 @@ KNOWN_APPS: dict[str, dict] = {
         "name": "Routa",
         "icon": "🚐",
         "public": True,
-        "url": "https://routa.avalone.online",
+        "url": "https://work.avalone.online",
     },
 }
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS user_apps (
+CREATE TABLE IF NOT EXISTS work_user_apps (
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     app_id     TEXT NOT NULL,
     enabled    INTEGER DEFAULT 1,
     created_at TEXT NOT NULL,
     PRIMARY KEY (user_id, app_id)
 );
-CREATE INDEX IF NOT EXISTS idx_user_apps_enabled ON user_apps(user_id, enabled);
+CREATE INDEX IF NOT EXISTS idx_work_user_apps_enabled ON work_user_apps(user_id, enabled);
 """
 
 
@@ -65,7 +65,7 @@ def registry() -> list[dict]:
 def _rows_for(user_id: int) -> dict[str, bool]:
     with _conn() as con:
         rows = con.execute(
-            "SELECT app_id, enabled FROM user_apps WHERE user_id=?", (user_id,)
+            "SELECT app_id, enabled FROM work_user_apps WHERE user_id=?", (user_id,)
         ).fetchall()
     return {r["app_id"]: bool(r["enabled"]) for r in rows}
 
@@ -109,7 +109,7 @@ def set_access(user_id: int, app_id: str, enabled: bool) -> None:
     with _conn() as con:
         con.execute(
             """
-            INSERT INTO user_apps (user_id, app_id, enabled, created_at)
+            INSERT INTO work_user_apps (user_id, app_id, enabled, created_at)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(user_id, app_id) DO UPDATE SET enabled=excluded.enabled
             """,
@@ -127,4 +127,4 @@ def grant_default(user_id: int) -> None:
 def delete_for_user(user_id: int) -> None:
     """Явно удалить все записи доступа пользователя (для tenant.delete_user)."""
     with _conn() as con:
-        con.execute("DELETE FROM user_apps WHERE user_id=?", (user_id,))
+        con.execute("DELETE FROM work_user_apps WHERE user_id=?", (user_id,))

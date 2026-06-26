@@ -1,18 +1,20 @@
-"""Единая SQLite-БД приложения: путь к файлу.
+"""Work module database: unified Avalone SQLite.
 
-Каждый функциональный модуль (catalog, money, notify, lexicon,
-entry_meta) держит СВОЮ таблицу и свой `_conn`, импортируя отсюда только путь
-`DB_PATH`. Раньше модуль назывался `chatdb`, а файл — `chat.db` (эпоха
-Telegram-бота, разворот №3); и модуль, и файл переименованы, чат-слой удалён.
+All Work tables live in the single Avalone platform database and use the
+`work_` prefix. Modules import `DB_PATH` or `connection()` from here.
 """
 
 import os
-from pathlib import Path
+import sqlite3
 
-DB_PATH = Path(os.getenv("ROUTA_DB_PATH", Path.home() / ".routa" / "routa.db"))
-_LEGACY_DB = DB_PATH.parent / "chat.db"
-# Одноразовая идемпотентная миграция legacy-имени файла: chat.db -> routa.db.
-# Срабатывает один раз при первом импорте модуля, если новый файл ещё не создан.
-if not DB_PATH.exists() and _LEGACY_DB.exists():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _LEGACY_DB.rename(DB_PATH)
+from avalone_core.db import connection as _connection
+from avalone_core.db import DB_PATH, configure
+
+# Legacy test override: allow isolated test DBs while the app uses the unified DB.
+if os.getenv("ROUTA_DB_PATH"):
+    configure(os.getenv("ROUTA_DB_PATH"))
+
+
+def connection() -> sqlite3.Connection:
+    """Return a connection to the unified Avalone database."""
+    return _connection()

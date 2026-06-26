@@ -17,6 +17,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "python-multipart>=0.0.32",
     "qrcode>=8.2",
+    "avalone-core @ file:///Users/lucifer/github-work/avalone.online/src/avalone_core",
 ]
 
 [dependency-groups]
@@ -38,6 +39,9 @@ target-version = "py312"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/routa"]

@@ -6,7 +6,7 @@ Run this before every deploy or after any non-trivial change. It checks:
 1. Python syntax for all src/ files.
 2. Unit tests pass.
 3. i18n linter is green.
-4. Inline JavaScript in app.html parses without syntax errors.
+4. Inline JavaScript in work.html parses without syntax errors.
 5. (Optional) Local Routa server responds on /healthz.
 
 Exit code 0 = safe to deploy. Anything else = stop and fix.
@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "routa"
-APP_HTML = ROOT / "src" / "routa" / "web" / "templates" / "app.html"
+APP_HTML = ROOT / "src" / "routa" / "web" / "templates" / "work.html"
 
 
 def run(cmd: list[str], *, cwd: Path | None = None, env: dict | None = None) -> subprocess.CompletedProcess:
@@ -73,7 +73,7 @@ def check_i18n() -> bool:
 
 
 def check_js_syntax() -> bool:
-    """Extract inline <script> tags from app.html and parse them with bun/node."""
+    """Extract inline <script> tags from work.html and parse them with bun/node."""
     html = APP_HTML.read_text(encoding="utf-8")
     scripts = re.findall(r"<script>(.*?)</script>", html, re.DOTALL)
     if not scripts:

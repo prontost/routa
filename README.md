@@ -1,13 +1,15 @@
-# Routa
+# Work — Avalone
 
-Work-in-progress app for organizing people commute / work trips. Live at `https://routa.avalone.online`.
+Organize work trips and commutes inside the Avalone platform. Live at `https://work.avalone.online`.
 
-Currently the public UI is a placeholder: home and analytics show a "coming soon" card. The codebase was forked from Counta, so the backend still carries the double-entry ledger machinery while the product is being repurposed.
+Work is the first active branch of Avalone. It is built on the shared Avalone shell so users never feel like they left the platform when switching between Work, Counta, and the portal.
 
-- **Own SQLite database** — no external accounting system, no ERPNext, no AI.
-- **Standalone** — own login and DB; no built-in app switcher; SSO is a future direction, not implemented yet.
-- **i18n-first** — `ru` / `en` / `ko` from a central glossary.
-- **Forked from Counta** — accounts, journal and reports still exist in code but will be reworked into trip-management flows.
+- **Trips** — create, edit, close, and delete rides to/from work.
+- **Invites** — share a trip via link or QR; colleagues join with one click using Avalone SSO.
+- **Roles** — driver, passenger, or not going; anyone can change their role freely.
+- **Stats** — per-user and global trip statistics with simple charts.
+- **Notifications** — in-app and email reminders about invites, role changes, and upcoming trips.
+- **Avalone SSO** — shared `.avalone.online` session cookie; sign in once across all apps.
 
 ## Stack
 
@@ -15,7 +17,8 @@ Currently the public UI is a placeholder: home and analytics show a "coming soon
 - FastAPI + Uvicorn
 - SQLite (`~/.routa/routa.db`; override with `ROUTA_DB_PATH`)
 - Jinja2 + vanilla JS SPA
-- `itsdangerous` signed session cookies
+- Shared Avalone shell (`avalone-shell.css`, `avalone-shell.js`, `shell.html`)
+- `itsdangerous` signed session cookies + Fernet-signed Avalone SSO cookie
 - pytest for tests
 
 ## Dev
@@ -30,7 +33,9 @@ uv run python scripts/pre_flight.py   # deploy gate
 uv run uvicorn routa.web.app:app --host 127.0.0.1 --port 8812 --reload
 ```
 
-Open `http://127.0.0.1:8810`.
+Open `http://127.0.0.1:8812`.
+
+For cross-app SSO locally you need a shared domain; the production setup uses Cloudflare Tunnels so `avalone.online`, `counta.avalone.online`, and `work.avalone.online` all share the `avalone_session` cookie.
 
 ## Tests
 

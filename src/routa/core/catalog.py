@@ -58,7 +58,7 @@ CANON: dict[str, dict] = {
 
 # Мультиюзер: переводы категорий у каждого тенанта свои. PK (tenant, account).
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS catalog_i18n (
+CREATE TABLE IF NOT EXISTS work_catalog_i18n (
     tenant INTEGER NOT NULL DEFAULT 1,
     account TEXT NOT NULL,
     ru TEXT, en TEXT, ko TEXT,
@@ -76,29 +76,29 @@ def _conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB_PATH)
     con.executescript(_SCHEMA)
-    cols = {r[1] for r in con.execute("PRAGMA table_info(catalog_i18n)")}
+    cols = {r[1] for r in con.execute("PRAGMA table_info(work_catalog_i18n)")}
     if "tenant" not in cols:
-        con.execute("ALTER TABLE catalog_i18n ADD COLUMN tenant INTEGER NOT NULL DEFAULT 1")
+        con.execute("ALTER TABLE work_catalog_i18n ADD COLUMN tenant INTEGER NOT NULL DEFAULT 1")
     return con
 
 
 def set_labels(account: str, ru: str, en: str, ko: str) -> None:
     with _conn() as con:
         con.execute(
-            "INSERT INTO catalog_i18n (tenant, account, ru, en, ko) VALUES (?,?,?,?,?) "
+            "INSERT INTO work_catalog_i18n (tenant, account, ru, en, ko) VALUES (?,?,?,?,?) "
             "ON CONFLICT(tenant, account) DO UPDATE SET ru=excluded.ru, en=excluded.en, ko=excluded.ko",
             (_tid(), account, ru, en, ko))
 
 
 def forget_labels(account: str) -> None:
-    """Стереть переводы ярлыка из catalog_i18n (при окончательном удалении)."""
+    """Стереть переводы ярлыка из work_catalog_i18n (при окончательном удалении)."""
     with _conn() as con:
-        con.execute("DELETE FROM catalog_i18n WHERE tenant=? AND account=?", (_tid(), account))
+        con.execute("DELETE FROM work_catalog_i18n WHERE tenant=? AND account=?", (_tid(), account))
 
 
 def _user_labels() -> dict[str, dict]:
     with _conn() as con:
-        rows = con.execute("SELECT account, ru, en, ko FROM catalog_i18n WHERE tenant=?",
+        rows = con.execute("SELECT account, ru, en, ko FROM work_catalog_i18n WHERE tenant=?",
                            (_tid(),)).fetchall()
     return {r[0]: {"ru": r[1], "en": r[2], "ko": r[3]} for r in rows}
 
@@ -165,7 +165,7 @@ def known_accounts() -> set[str]:
 
 
 def is_user_category(account: str) -> bool:
-    """Заведена ли пользователем (есть запись в catalog_i18n)."""
+    """Заведена ли пользователем (есть запись в work_catalog_i18n)."""
     return account in known_accounts()
 
 

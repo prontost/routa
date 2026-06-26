@@ -30,8 +30,8 @@ def client(tmp_path, monkeypatch):
 
     c = TestClient(app)
     tenant.ensure_owner("owner", "ownerpass")
-    from routa.web.app import _signer
-    c.cookies.set("routa_session", _signer.dumps(str(tenant.OWNER_TENANT_ID)))
+    from routa.web.app import _sso_signer
+    c.cookies.set("avalone_session", _sso_signer.dumps(str(tenant.OWNER_TENANT_ID)))
     return c
 
 

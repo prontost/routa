@@ -14,12 +14,12 @@ import re
 import sys
 from pathlib import Path
 
-TEMPLATE = Path(__file__).resolve().parent.parent / "src/routa/web/templates/app.html"
+TEMPLATE = Path(__file__).resolve().parent.parent / "src/routa/web/templates/work.html"
 
 
 def extract_i18n_keys(js: str) -> dict[str, set[str]]:
     """Ключи каждого языка из объекта I18N = {...}."""
-    m = re.search(r"(?:const|let)\s+I18N\s*=\s*\{(.*?)\}\};", js, re.S)
+    m = re.search(r"(?:const|let)\s+I18N\s*=\s*\{(.*?)\};", js, re.S)
     if not m:
         print("✗ не нашёл объект I18N"); sys.exit(1)
     body = m.group(1) + "}"  # вернём закрывающую скобку последнего языка

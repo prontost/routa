@@ -1,30 +1,22 @@
-"""Журнал уведомлений пользователя в разрезе приложений.
-
-Каждое уведомление привязано к пользователю (tenant_id) и к приложению (app).
-Это позволяет вести отдельные журналы для Routa, Ride и будущих приложений
-платформы avalone.online.
-"""
+"""In-app work_notifications for Work."""
 
 import sqlite3
 from datetime import datetime, timezone
 
 from routa.core.db import DB_PATH
+from routa.core import tenant
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS notifications (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    tenant_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    app          TEXT NOT NULL,
-    kind         TEXT DEFAULT 'info',
-    title        TEXT NOT NULL,
-    body         TEXT DEFAULT '',
-    read_at      TEXT DEFAULT '',
-    dismissed_at TEXT DEFAULT '',
-    created_at   TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS work_notifications (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id   INTEGER NOT NULL,
+    type        TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    body        TEXT NOT NULL,
+    data        TEXT DEFAULT '',
+    is_read     INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS idx_notif_tenant_app ON notifications(tenant_id, app);
-CREATE INDEX IF NOT EXISTS idx_notif_created ON notifications(created_at);
 """
 
 
@@ -37,96 +29,46 @@ def _conn() -> sqlite3.Connection:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def add(tenant_id: int, app: str, title: str, body: str = "", kind: str = "info") -> int:
-    """Добавить уведомление. Возвращает id."""
+def notify(tenant_id: int, type_: str, title: str, body: str, data: str = "") -> int:
     with _conn() as con:
         cur = con.execute(
-            "INSERT INTO notifications (tenant_id, app, kind, title, body, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (tenant_id, app, kind, title, body, _now()),
+            "INSERT INTO work_notifications (tenant_id, type, title, body, data, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (tenant_id, type_, title, body, data, _now()),
         )
-        return cur.lastrowid or 0
+        return cur.lastrowid
 
 
-def list_(
-    tenant_id: int,
-    app: str,
-    filter: str = "all",
-    limit: int = 50,
-    offset: int = 0,
-) -> dict:
-    """Список уведомлений с пагинацией.
-
-    filter:
-      - all       — все неудалённые
-      - unread    — непрочитанные
-      - read      — прочитанные
-      - dismissed — удалённые/скрытые
-    """
-    where = "tenant_id = ? AND app = ?"
-    params: list = [tenant_id, app]
-
-    if filter == "unread":
-        where += " AND read_at = '' AND dismissed_at = ''"
-    elif filter == "read":
-        where += " AND read_at <> '' AND dismissed_at = ''"
-    elif filter == "dismissed":
-        where += " AND dismissed_at <> ''"
-    else:  # all
-        where += " AND dismissed_at = ''"
-
+def list_work_notifications(limit: int = 50) -> list[dict]:
+    tid = tenant.require_current()
     with _conn() as con:
         rows = con.execute(
-            f"SELECT * FROM notifications WHERE {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            params + [limit, offset],
+            "SELECT * FROM work_notifications WHERE tenant_id=? ORDER BY created_at DESC LIMIT ?",
+            (tid, limit),
         ).fetchall()
-        total = con.execute(
-            f"SELECT COUNT(*) FROM notifications WHERE {where}",
-            params,
-        ).fetchone()[0]
-
-    entries = [dict(r) for r in rows]
-    return {
-        "entries": entries,
-        "total": total,
-        "has_more": offset + len(entries) < total,
-    }
+        return [dict(r) for r in rows]
 
 
-def mark_read(ids: list[int], tenant_id: int) -> int:
-    """Пометить уведомления прочитанными. Возвращает число затронутых."""
-    if not ids:
-        return 0
-    placeholders = ",".join("?" * len(ids))
+def unread_count() -> int:
+    tid = tenant.require_current()
     with _conn() as con:
-        cur = con.execute(
-            f"UPDATE notifications SET read_at = ? WHERE tenant_id = ? AND id IN ({placeholders})",
-            (_now(), tenant_id, *ids),
-        )
-        return cur.rowcount
-
-
-def mark_dismissed(ids: list[int], tenant_id: int) -> int:
-    """Скрыть/удалить уведомления. Возвращает число затронутых."""
-    if not ids:
-        return 0
-    placeholders = ",".join("?" * len(ids))
-    with _conn() as con:
-        cur = con.execute(
-            f"UPDATE notifications SET dismissed_at = ? WHERE tenant_id = ? AND id IN ({placeholders})",
-            (_now(), tenant_id, *ids),
-        )
-        return cur.rowcount
-
-
-def count_unread(tenant_id: int, app: str) -> int:
-    with _conn() as con:
-        row = con.execute(
-            "SELECT COUNT(*) FROM notifications WHERE tenant_id = ? AND app = ? "
-            "AND read_at = '' AND dismissed_at = ''",
-            (tenant_id, app),
+        r = con.execute(
+            "SELECT COUNT(*) FROM work_notifications WHERE tenant_id=? AND is_read=0", (tid,)
         ).fetchone()
-    return row[0] if row else 0
+        return r[0] if r else 0
+
+
+def mark_read(notification_id: int) -> None:
+    tid = tenant.require_current()
+    with _conn() as con:
+        con.execute(
+            "UPDATE work_notifications SET is_read=1 WHERE id=? AND tenant_id=?", (notification_id, tid)
+        )
+
+
+def mark_all_read() -> None:
+    tid = tenant.require_current()
+    with _conn() as con:
+        con.execute("UPDATE work_notifications SET is_read=1 WHERE tenant_id=?", (tid,))

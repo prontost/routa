@@ -1,63 +1,46 @@
-"""API для журнала уведомлений пользователя."""
+"""Notifications API."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
 from routa.core import notifications
-from routa.web.api.dependencies import current_tenant
 
-router = APIRouter(prefix="/notifications")
-
-
-@router.get("")
-async def list_notifications(
-    app: str = "routa",
-    filter: str = "all",
-    limit: int = 50,
-    offset: int = 0,
-    tenant_id: int = Depends(current_tenant),
-):
-    """Список уведомлений текущего пользователя для приложения app.
-
-    filter: all | unread | read | dismissed
-    """
-    if filter not in ("all", "unread", "read", "dismissed"):
-        filter = "all"
-    return notifications.list_(tenant_id, app, filter=filter, limit=limit, offset=offset)
+router = APIRouter()
 
 
-@router.post("/read")
-async def mark_read(payload: dict, tenant_id: int = Depends(current_tenant)):
-    ids = [int(i) for i in payload.get("ids", []) if str(i).isdigit()]
-    n = notifications.mark_read(ids, tenant_id)
-    return {"marked": n}
+def _err(msg: str, code: int = 400):
+    return JSONResponse({"error": msg}, status_code=code)
 
 
-@router.post("/dismiss")
-async def mark_dismissed(payload: dict, tenant_id: int = Depends(current_tenant)):
-    ids = [int(i) for i in payload.get("ids", []) if str(i).isdigit()]
-    n = notifications.mark_dismissed(ids, tenant_id)
-    return {"dismissed": n}
+@router.get("/notifications")
+async def list_notifications(limit: int = 50):
+    try:
+        return {"notifications": notifications.list_work_notifications(limit)}
+    except PermissionError:
+        return _err("unauthorized", 401)
 
 
-@router.get("/unread-count")
-async def unread_count(app: str = "routa", tenant_id: int = Depends(current_tenant)):
-    return {"count": notifications.count_unread(tenant_id, app)}
+@router.get("/notifications/unread-count")
+async def unread_count():
+    try:
+        return {"count": notifications.unread_count()}
+    except PermissionError:
+        return _err("unauthorized", 401)
 
 
-@router.post("")
-async def create_notification(
-    payload: dict,
-    tenant_id: int = Depends(current_tenant),
-):
-    """Ручное создание уведомления (для тестов и системных событий)."""
-    title = payload.get("title", "").strip()
-    if not title:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="title required")
-    nid = notifications.add(
-        tenant_id,
-        app=payload.get("app", "routa"),
-        title=title,
-        body=payload.get("body", ""),
-        kind=payload.get("kind", "info"),
-    )
-    return {"id": nid}
+@router.post("/notifications/{notification_id}/read")
+async def mark_read(notification_id: int):
+    try:
+        notifications.mark_read(notification_id)
+        return {"ok": True}
+    except PermissionError:
+        return _err("unauthorized", 401)
+
+
+@router.post("/notifications/read-all")
+async def mark_all_read():
+    try:
+        notifications.mark_all_read()
+        return {"ok": True}
+    except PermissionError:
+        return _err("unauthorized", 401)

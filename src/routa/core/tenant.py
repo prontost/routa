@@ -39,7 +39,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS admins (
-    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    module  TEXT NOT NULL DEFAULT 'work',
+    PRIMARY KEY (user_id, module)
 );
 """
 
@@ -49,6 +51,8 @@ def _conn() -> sqlite3.Connection:
     con = sqlite3.connect(DB_PATH)
     con.executescript(_SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(users)")}
+    if "email_verified" not in cols:
+        con.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0")
     if "verify_code" not in cols:
         con.execute("ALTER TABLE users ADD COLUMN verify_code TEXT DEFAULT ''")
     if "verify_sent" not in cols:
@@ -248,15 +252,16 @@ def delete_user(tenant_id: int) -> None:
     with _conn() as con:
         # tenant-specific tables
         for tbl in (
-            "led_accounts", "led_entries", "led_lines", "led_seq",
-            "money_accounts", "user_settings", "catalog_i18n",
-            "entry_meta", "slept_entries", "lexicon",
-            "user_apps", "notifications",
+            "work_led_accounts", "work_led_entries", "work_led_lines", "work_led_seq",
+            "work_money_accounts", "work_user_settings", "work_catalog_i18n",
+            "work_entry_meta", "work_slept_entries", "work_lexicon",
+            "work_user_apps", "work_notifications",
         ):
             try:
                 con.execute(f"DELETE FROM {tbl} WHERE tenant=?", (tenant_id,))
             except sqlite3.OperationalError:
                 pass  # таблица может ещё не существовать
+        con.execute("DELETE FROM admins WHERE user_id=? AND module='work'", (tenant_id,))
         con.execute("DELETE FROM users WHERE id=?", (tenant_id,))
 
 
@@ -283,41 +288,48 @@ def ensure_owner(login: str, password: str) -> int:
 
 # --- администраторы инстанса (отдельно от OWNER_TENANT_ID) ---
 def ensure_admin_table() -> None:
-    """Создать таблицу admins, если её ещё нет (для миграций)."""
+    """Создать таблицу admins, если её ещё нет (shared Avalone table)."""
     with _conn() as con:
-        con.execute("CREATE TABLE IF NOT EXISTS admins (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE)")
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS admins ("
+            "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+            "module TEXT NOT NULL DEFAULT 'work', "
+            "PRIMARY KEY (user_id, module))"
+        )
 
 
 def is_admin(user_id: int | None) -> bool:
-    """Является ли пользователь администратором инстанса."""
+    """Является ли пользователь администратором Work."""
     if not user_id:
         return False
     with _conn() as con:
-        r = con.execute("SELECT 1 FROM admins WHERE user_id=?", (user_id,)).fetchone()
+        r = con.execute("SELECT 1 FROM admins WHERE user_id=? AND module='work'", (user_id,)).fetchone()
     return bool(r)
 
 
 def list_admins() -> list[dict]:
-    """Список администраторов с логинами."""
+    """Список администраторов Work с логинами."""
     with _conn() as con:
         rows = con.execute(
             "SELECT u.id, u.login, u.email, u.created_at FROM admins a "
-            "JOIN users u ON u.id=a.user_id ORDER BY u.login"
+            "JOIN users u ON u.id=a.user_id WHERE a.module='work' ORDER BY u.login"
         ).fetchall()
     return [{"id": r[0], "login": r[1], "email": r[2], "created_at": r[3]} for r in rows]
 
 
 def add_admin(user_id: int) -> None:
-    """Назначить пользователя администратором."""
+    """Назначить пользователя администратором Work."""
     ensure_admin_table()
     with _conn() as con:
-        con.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (user_id,))
+        con.execute(
+            "INSERT OR IGNORE INTO admins (user_id, module) VALUES (?, 'work')", (user_id,)
+        )
 
 
 def remove_admin(user_id: int) -> None:
-    """Снять права администратора."""
+    """Снять права администратора Work."""
     with _conn() as con:
-        con.execute("DELETE FROM admins WHERE user_id=?", (user_id,))
+        con.execute("DELETE FROM admins WHERE user_id=? AND module='work'", (user_id,))
 
 
 def get_user_by_login(login: str) -> dict | None:

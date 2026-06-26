@@ -1,4 +1,4 @@
-"""Per-user learned lexicon: the user's words -> their accounts.
+"""Per-user learned work_lexicon: the user's words -> their accounts.
 
 Третий слой архитектуры (Дэн, 2026-06-12): знания о словаре пользователя — это
 ДАННЫЕ, не код и не промпт. «Карта» у одного — дебетовая, у другого — кредитка;
@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from routa.core.db import DB_PATH  # единый файл БД приложения
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS lexicon (
+CREATE TABLE IF NOT EXISTS work_lexicon (
     id INTEGER PRIMARY KEY,
     chat_id INTEGER NOT NULL,
     kind TEXT NOT NULL,           -- 'money' | 'category'
@@ -55,7 +55,7 @@ def lookup(chat_id: int, kind: str, phrase: str) -> str | None:
         return None
     with _conn() as con:
         rows = con.execute(
-            "SELECT phrase, account FROM lexicon WHERE chat_id=? AND kind=? ORDER BY length(phrase) DESC",
+            "SELECT phrase, account FROM work_lexicon WHERE chat_id=? AND kind=? ORDER BY length(phrase) DESC",
             (chat_id, kind)).fetchall()
     for saved, account in rows:
         if saved == p or saved in p or p in saved:
@@ -68,7 +68,7 @@ def save(chat_id: int, kind: str, phrase: str, account: str) -> None:
         return
     with _conn() as con:
         con.execute(
-            "INSERT INTO lexicon (chat_id, kind, phrase, account, ts) VALUES (?,?,?,?,?) "
+            "INSERT INTO work_lexicon (chat_id, kind, phrase, account, ts) VALUES (?,?,?,?,?) "
             "ON CONFLICT(chat_id, kind, phrase) DO UPDATE SET account=excluded.account, ts=excluded.ts",
             (chat_id, kind, _norm(phrase), account,
              datetime.now(timezone.utc).isoformat(timespec="seconds")))

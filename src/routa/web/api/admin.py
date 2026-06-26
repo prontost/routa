@@ -55,7 +55,7 @@ async def admin_users(admin_id: int = Depends(require_admin)):
     with tenant._conn() as con:
         rows = con.execute(
             "SELECT u.id, u.login, u.email, u.email_verified, u.created_at, "
-            "(SELECT COUNT(*) FROM led_entries e WHERE e.tenant=u.id) as entries "
+            "(SELECT COUNT(*) FROM work_led_entries e WHERE e.tenant=u.id) as entries "
             "FROM users u ORDER BY u.id"
         ).fetchall()
     return {
@@ -81,7 +81,7 @@ async def admin_stats(admin_id: int = Depends(require_admin)):
     from routa.web.app import BUILD_ID
     db_size = db.DB_PATH.stat().st_size if db.DB_PATH.exists() else 0
     users = tenant._conn().execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    entries = tenant._conn().execute("SELECT COUNT(*) FROM led_entries").fetchone()[0]
+    entries = tenant._conn().execute("SELECT COUNT(*) FROM work_led_entries").fetchone()[0]
     currencies = len(currency.ALL)
     return {
         "build_id": BUILD_ID,

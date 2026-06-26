@@ -6,7 +6,7 @@
   #config-form { margin-top:6px; }
   #logs { white-space:pre-wrap; word-break:break-word; }
 </style>
-<h1>Routa Admin</h1>
+<h1>Админ — Работа</h1>
 <p class="muted">Панель управления инстансом · build {{ build_id }}</p>
 
 <section>
@@ -104,13 +104,13 @@
 <section style="border-color:var(--red)">
   <h2>Опасная зона</h2>
   <p class="muted">Перезапускает весь сервис. launchd поднимет процесс заново.</p>
-  <button class="btn" style="background:var(--red)" onclick="restartService()" type="button">🔄 Перезапустить Routa</button>
+  <button class="btn" style="background:var(--red)" onclick="restartService()" type="button">🔄 Перезапустить Работу</button>
   <p id="restart-msg" style="margin-top:8px;font-size:13px"></p>
 </section>
 
 <section>
   <h2>QR-код приложения</h2>
-  <p class="muted">Ссылка на главную страницу Routa.</p>
+  <p class="muted">Ссылка на главную страницу Работы.</p>
   <div id="qr-wrap"></div>
 </section>
 
@@ -327,7 +327,7 @@ async function saveConstants(){
 }
 
 async function restartService(){
-  if(!confirm('Перезапустить Routa? Сервис будет недоступен несколько секунд.')) return;
+  if(!confirm('Перезапустить Работу? Сервис будет недоступен несколько секунд.')) return;
   if(!confirm('Точно? Все активные сессии прервутся.')) return;
   const d = await api('/restart',{method:'POST'});
   $('restart-msg').textContent = d.error ? 'Ошибка: '+d.error : 'Перезапуск… обновите страницу через несколько секунд.';
