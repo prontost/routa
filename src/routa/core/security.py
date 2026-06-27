@@ -1,11 +1,7 @@
-"""Защита аутентификации: rate-limit и токены подтверждения почты.
+"""Authentication guards: rate limits, verification codes, reset tokens.
 
-Rate-limit — in-memory скользящее окно по ключу (ip|login). Достаточно для
-одного процесса с --reload (single uvicorn). При горизонтальном масштабе
-заменить на Redis. Цель — отбить брутфорс пароля и спам-регистрацию.
-
-Email-токены: код в users.email_verify (через core/tenant), отправка письма —
-core/notify._send_email. Здесь генерация/проверка кода и throttle.
+Rate-limit is an in-memory sliding window per key (ip|login). Good enough for a
+single uvicorn process. Replace with Redis if we ever scale horizontally.
 """
 
 import secrets
@@ -49,37 +45,37 @@ def allow_recover(ip: str) -> bool:
 
 
 def new_code() -> str:
-    """6-значный код подтверждения почты."""
+    """6-digit email verification code."""
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def new_token() -> str:
-    """Одноразовый токен сброса пароля (URL-safe)."""
+    """One-time password-reset token (URL-safe)."""
     return secrets.token_urlsafe(constants.get("password_reset_token_entropy"))
 
 
 def validate_password(password: str, strict: bool = False) -> tuple[bool, str]:
-    """Validate password complexity. Returns (ok, error_message).
+    """Validate password complexity. Returns (ok, error_key).
 
     Non-strict (default): only minimum length from constants.
     Strict: ≥8 chars, uppercase, lowercase, digit, special character.
     """
     import re
     if not password:
-        return False, "Пароль не может быть пустым"
+        return False, "error_password_empty"
     min_len = constants.get("min_password_length")
     if not strict:
         if len(password) < min_len:
-            return False, f"Пароль ≥{min_len} символов"
+            return False, "error_password_too_short"
         return True, ""
     if len(password) < 8:
-        return False, "Пароль ≥8 символов"
+        return False, "error_password_too_short"
     if not re.search(r"[A-ZА-Я]", password):
-        return False, "Пароль должен содержать заглавную букву"
+        return False, "error_password_no_upper"
     if not re.search(r"[a-zа-я]", password):
-        return False, "Пароль должен содержать строчную букву"
+        return False, "error_password_no_lower"
     if not re.search(r"\d", password):
-        return False, "Пароль должен содержать цифру"
+        return False, "error_password_no_digit"
     if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", password):
-        return False, "Пароль должен содержать спецсимвол"
+        return False, "error_password_no_special"
     return True, ""

@@ -24,6 +24,7 @@ import sqlite3
 from datetime import date, datetime
 from decimal import Decimal
 
+from routa.core import glossary
 from routa.core.db import DB_PATH
 
 ABBR = "DP"   # суффикс PK счёта (наследие компании Denis Personal — совместимость)
@@ -170,7 +171,7 @@ def delete_account(name: str) -> None:
         used = con.execute("SELECT COUNT(*) FROM work_led_lines WHERE tenant=? AND account=?",
                            (tid, name)).fetchone()[0]
         if used:
-            raise LedgerError(f"счёт {name} ещё используется в {used} строках проводок")
+            raise LedgerError(glossary.t('error_account_in_use').format(name=name, used=used))
         con.execute("DELETE FROM work_led_accounts WHERE tenant=? AND name=?", (tid, name))
 
 
@@ -187,7 +188,7 @@ def post_journal_entry(entry_date: date, remark: str, debit_account: str,
     name/creation/tenant — для миграции."""
     amt = round(float(amount), 2)
     if amt <= 0:
-        raise LedgerError("сумма должна быть положительной")
+        raise LedgerError(glossary.t('error_amount_positive_core'))
     tid = tenant if tenant is not None else _tid()
     now = creation or datetime.now().isoformat(timespec="seconds")
     with _conn() as con:
@@ -347,14 +348,14 @@ def assert_balanced(tenant: int | None = None) -> int:
             f"SELECT entry, SUM(debit), SUM(credit) {base} GROUP BY entry "
             "HAVING ROUND(SUM(debit),2)<>ROUND(SUM(credit),2)", params).fetchall()
         if bad:
-            raise LedgerError(f"несбалансированные проводки: {bad[:5]}")
+            raise LedgerError(glossary.t('error_unbalanced_entries').format(bad=bad[:5]))
         gd, gc = con.execute(
             f"SELECT COALESCE(SUM(debit),0), COALESCE(SUM(credit),0) {base}", params).fetchone()
         n = con.execute(
             "SELECT COUNT(*) FROM work_led_entries" + (" WHERE tenant=?" if tid is not None else ""),
             params).fetchone()[0]
     if round(gd, 2) != round(gc, 2):
-        raise LedgerError(f"глобальный дисбаланс: debit={gd} credit={gc}")
+        raise LedgerError(glossary.t('error_global_imbalance').format(gd=gd, gc=gc))
     return n
 
 

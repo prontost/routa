@@ -105,7 +105,7 @@ def list_for_admin(user_id: int) -> list[dict]:
 def set_access(user_id: int, app_id: str, enabled: bool) -> None:
     """Включить/выключить доступ пользователя к приложению."""
     if app_id not in KNOWN_APPS:
-        raise ValueError(f"unknown app: {app_id}")
+        raise ValueError("error_unknown_app")
     with _conn() as con:
         con.execute(
             """

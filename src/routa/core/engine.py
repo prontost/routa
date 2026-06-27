@@ -12,7 +12,7 @@
 from datetime import date
 from decimal import Decimal
 
-from routa.core import constants, money, sqlledger
+from routa.core import constants, glossary, money, sqlledger
 
 
 class EngineError(Exception):
@@ -55,7 +55,7 @@ async def post_journal_entry(entry_date: date, remark: str, debit_account: str,
     if money.is_money(debit_account) and money.is_money(credit_account):
         if money.account_currency(debit_account) != money.account_currency(credit_account):
             raise EngineError(
-                "перевод между счетами разной валюты запрещён: "
+                f"{glossary.t('error_currency_transfer')}: "
                 f"{money.account_currency(debit_account)} ≠ {money.account_currency(credit_account)}"
             )
     try:

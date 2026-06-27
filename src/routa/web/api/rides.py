@@ -17,7 +17,7 @@ async def list_trips(filter_status: str = "all", direction: str | None = None, o
     try:
         return {"trips": rides.list_trips(filter_status, direction, only_mine)}
     except PermissionError:
-        return _err("unauthorized", 401)
+        return _err("error_unauthorized", 401)
 
 
 @router.post("/trips")
@@ -32,7 +32,7 @@ async def create_trip(request: Request):
         )
         return {"trip": trip}
     except PermissionError:
-        return _err("unauthorized", 401)
+        return _err("error_unauthorized", 401)
     except ValueError as e:
         return _err(str(e))
 
@@ -41,7 +41,7 @@ async def create_trip(request: Request):
 async def get_trip(trip_id: int):
     trip = rides.get_trip(trip_id)
     if not trip:
-        return _err("not found", 404)
+        return _err("error_not_found_trip", 404)
     return {"trip": trip}
 
 
@@ -59,7 +59,7 @@ async def update_trip(trip_id: int, request: Request):
         )
         return {"trip": trip}
     except PermissionError:
-        return _err("forbidden", 403)
+        return _err("error_forbidden", 403)
     except ValueError as e:
         return _err(str(e))
 
@@ -70,7 +70,7 @@ async def delete_trip(trip_id: int):
         rides.delete_trip(trip_id)
         return {"ok": True}
     except PermissionError:
-        return _err("forbidden", 403)
+        return _err("error_forbidden", 403)
 
 
 @router.post("/trips/{trip_id}/join")
@@ -84,7 +84,7 @@ async def join_trip(trip_id: int, request: Request):
         )
         return {"trip": trip}
     except PermissionError:
-        return _err("unauthorized", 401)
+        return _err("error_unauthorized", 401)
     except ValueError as e:
         return _err(str(e))
 
@@ -95,7 +95,7 @@ async def leave_trip(trip_id: int):
         rides.leave_trip(trip_id)
         return {"ok": True}
     except PermissionError:
-        return _err("unauthorized", 401)
+        return _err("error_unauthorized", 401)
 
 
 @router.post("/trips/{trip_id}/members/{member_tid}")
@@ -110,7 +110,7 @@ async def update_member(trip_id: int, member_tid: int, request: Request):
         )
         return {"trip": trip}
     except PermissionError:
-        return _err("forbidden", 403)
+        return _err("error_forbidden", 403)
     except ValueError as e:
         return _err(str(e))
 
@@ -121,7 +121,7 @@ async def close_trip(trip_id: int):
         trip = rides.close_trip(trip_id)
         return {"trip": trip}
     except PermissionError:
-        return _err("forbidden", 403)
+        return _err("error_forbidden", 403)
 
 
 @router.post("/trips/{trip_id}/reopen")
@@ -130,14 +130,14 @@ async def reopen_trip(trip_id: int):
         trip = rides.reopen_trip(trip_id)
         return {"trip": trip}
     except PermissionError:
-        return _err("forbidden", 403)
+        return _err("error_forbidden", 403)
 
 
 @router.get("/trips/by-code/{invite_code}")
 async def get_trip_by_code(invite_code: str):
     trip = rides.get_trip_by_code(invite_code)
     if not trip:
-        return _err("not found", 404)
+        return _err("error_not_found_trip", 404)
     return {"trip": trip}
 
 
@@ -146,7 +146,7 @@ async def get_stats(period: str = "all"):
     try:
         return {"stats": rides.stats(period)}
     except PermissionError:
-        return _err("unauthorized", 401)
+        return _err("error_unauthorized", 401)
 
 
 @router.get("/stats/export.csv")
@@ -158,4 +158,4 @@ async def export_csv(period: str = "all"):
             lines.append(f"{row['login']},{row['driver_count']},{row['passenger_count']}")
         return PlainTextResponse("\n".join(lines), media_type="text/csv; charset=utf-8")
     except PermissionError:
-        return _err("unauthorized", 401)
+        return _err("error_unauthorized", 401)

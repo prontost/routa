@@ -7,7 +7,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from routa.core import catalog, config, currency, engine, entry_meta, money, notify, security, tenant
+from routa.core import catalog, config, currency, engine, entry_meta, glossary, money, notify, security, tenant
 from routa.web.api.common import (
     _label, _money_label,
 )
@@ -55,7 +55,7 @@ async def change_password(payload: dict):
     if not ok:
         return JSONResponse({"error": err}, status_code=400)
     if not tenant.change_password(tenant.current(), old, new):
-        return JSONResponse({"error": "Старый пароль неверен"}, status_code=400)
+        return JSONResponse({"error": "error_old_password_wrong"}, status_code=400)
     return {"ok": True}
 
 @router.post("/account/email")
@@ -63,7 +63,7 @@ async def set_email(payload: dict):
     """Задать/сменить почту (сбрасывает подтверждение)."""
     email = (payload.get("email") or "").strip().lower()
     if "@" not in email or "." not in email:
-        return JSONResponse({"error": "Некорректная почта"}, status_code=400)
+        return JSONResponse({"error": "error_invalid_email"}, status_code=400)
     tenant.set_email(tenant.current(), email)
     return {"ok": True}
 
@@ -74,18 +74,22 @@ async def verify_send(request: Request):
     fwd = request.headers.get("x-forwarded-for", "")
     ip = (fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "?"))
     if not security.allow_verify(ip):
-        return JSONResponse({"error": "Слишком часто. Подождите."}, status_code=429)
+        return JSONResponse({"error": "error_rate_limit"}, status_code=429)
     u = tenant.get_user(tenant.current())
     if not u or not u["email"]:
-        return JSONResponse({"error": "Сначала укажите почту"}, status_code=400)
+        return JSONResponse({"error": "error_email_required"}, status_code=400)
     if u["email_verified"]:
         return {"ok": True, "already": True}
     code = security.new_code()
     tenant.set_verify_code(tenant.current(), code)
-    sent = notify._send_email(u["email"], "Код подтверждения Routa",
-                              f"Ваш код подтверждения: {code}")
+    lang = notify.user_lang()
+    if lang == "auto":
+        lang = "ru"
+    subject = glossary.t("email_verify_subject", lang)
+    body = glossary.t("email_verify_body", lang).format(code=code)
+    sent = notify._send_email(u["email"], subject, body)
     if not sent:
-        return JSONResponse({"error": "Почта не настроена на сервере"}, status_code=503)
+        return JSONResponse({"error": "error_email_not_configured"}, status_code=503)
     return {"ok": True}
 
 @router.post("/account/verify/check")
@@ -93,7 +97,7 @@ async def verify_check(payload: dict):
     """Сверить код подтверждения почты."""
     if tenant.check_verify_code(tenant.current(), payload.get("code") or ""):
         return {"ok": True}
-    return JSONResponse({"error": "Неверный код"}, status_code=400)
+    return JSONResponse({"error": "error_invalid_code"}, status_code=400)
 
 
 @router.post("/account/reset-password-request")
@@ -104,23 +108,23 @@ async def reset_password_request(request: Request):
     """
     ip = _client_ip(request)
     if not security.allow_recover(ip):
-        return JSONResponse({"error": "rate_limit"}, status_code=429)
+        return JSONResponse({"error": "error_rate_limit"}, status_code=429)
     tid = tenant.current()
     u = tenant.get_user(tid)
     if not u or not u.get("email") or not u.get("email_verified"):
-        return JSONResponse({"error": "email_required"}, status_code=400)
+        return JSONResponse({"error": "error_email_required"}, status_code=400)
     token = security.new_token()
     expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(timespec="seconds")
     tenant.set_reset_token(tid, token, expires)
     link = f"{config.web_base_url()}/reset?token={token}"
-    body = (
-        f"Вы запросили сброс пароля Routa.\n\n"
-        f"Перейдите по ссылке, чтобы задать новый пароль:\n{link}\n\n"
-        f"Ссылка действительна 30 минут. Если вы не запрашивали сброс — проигнорируйте письмо."
-    )
-    ok = notify._send_email(u["email"], "Сброс пароля", body)
+    lang = notify.user_lang()
+    if lang == "auto":
+        lang = "ru"
+    subject = glossary.t("email_reset_subject", lang)
+    body = glossary.t("email_reset_body", lang).format(link=link, expires_min=30)
+    ok = notify._send_email(u["email"], subject, body)
     if not ok:
-        return JSONResponse({"error": "email_not_configured"}, status_code=503)
+        return JSONResponse({"error": "error_email_not_configured"}, status_code=503)
     return {"ok": True}
 
 @router.get("/accounts")
@@ -145,7 +149,7 @@ async def create_income(payload: dict):
     тот же инвариант, что у категорий)."""
     name = (payload.get("name") or "").strip()
     if not name:
-        return JSONResponse({"error": "пустое имя"}, status_code=400)
+        return JSONResponse({"error": "error_empty_name"}, status_code=400)
     lang = payload.get("lang", "ru")
     existing = next((a for a in await engine.list_accounts(leaf_only=False, include_disabled=True)
                      if a["account_name"] == name and a["root_type"] == "Income"), None)
@@ -165,9 +169,9 @@ async def create_account(payload: dict):
     name = (payload.get("name") or "").strip()
     cur = (payload.get("currency") or "").upper()
     if not name:
-        return JSONResponse({"error": "пустое имя"}, status_code=400)
+        return JSONResponse({"error": "error_empty_name"}, status_code=400)
     if not currency.known(cur):
-        return JSONResponse({"error": "неизвестная валюта"}, status_code=400)
+        return JSONResponse({"error": "error_unknown_currency"}, status_code=400)
     existing = next((a for a in await engine.list_accounts(leaf_only=False, include_disabled=True)
                      if a["account_name"] == name and a["root_type"] == "Asset"), None)
     if existing:
@@ -186,7 +190,7 @@ async def account_rename(account: str, payload: dict):
     на стабильный id, а не на имя). Тот же приём, что у категорий."""
     label = (payload.get("label") or "").strip()
     if not label:
-        return JSONResponse({"error": "пустое имя"}, status_code=400)
+        return JSONResponse({"error": "error_empty_name"}, status_code=400)
     money.set_label(account, label)
     return {"name": account, "label": label}
 
@@ -239,7 +243,7 @@ async def account_purge(account: str, payload: dict):
     + сам счёт + метаданные. История гибнет навсегда. Трение: payload.confirm
     должен быть точным словом-подтверждением (передаёт фронт; проверяем непусто)."""
     if not (payload.get("confirm") or "").strip():
-        return JSONResponse({"error": "confirm_required"}, status_code=400)
+        return JSONResponse({"error": "error_confirm_required"}, status_code=400)
     try:
         for v in await engine.entries_of_account(account, docstatus=(1, 2)):
             await engine.delete_entry(v)
@@ -258,10 +262,10 @@ async def category_purge(account: str, payload: dict):
     пустой счёт удаляется. История цела (траты/доходы остаются под новым ярлыком)."""
     move_to = (payload.get("move_to") or "").strip()
     if not move_to:
-        return JSONResponse({"error": "move_to_required"}, status_code=400)
+        return JSONResponse({"error": "error_move_to_required"}, status_code=400)
     valid = {a["name"] for a in await engine.list_accounts(include_disabled=True)}
     if move_to not in valid or move_to == account:
-        return JSONResponse({"error": "bad_target"}, status_code=400)
+        return JSONResponse({"error": "error_bad_target"}, status_code=400)
     try:
         # переносим каждую проводку: пересоздаём с заменой нужной стороны на move_to
         for v in await engine.entries_of_account(account, docstatus=(1, 2)):
@@ -297,7 +301,7 @@ async def create_category(payload: dict):
     """
     name = (payload.get("name") or "").strip()
     if not name:
-        return JSONResponse({"error": "пустое имя"}, status_code=400)
+        return JSONResponse({"error": "error_empty_name"}, status_code=400)
     lang = payload.get("lang", "ru")
     cap = name.capitalize()
     # если счёт с таким именем уже есть (в т.ч. «призрак» без перевода) —
@@ -320,7 +324,7 @@ async def rename_category(account: str, payload: dict):
     раньше rename менял account_name мимо catalog_i18n)."""
     label = (payload.get("label") or "").strip()
     if not label:
-        return JSONResponse({"error": "пустое имя"}, status_code=400)
+        return JSONResponse({"error": "error_empty_name"}, status_code=400)
     lang = payload.get("lang", "ru")
     # текущие лейблы (из catalog_i18n или канона) + перезапись текущего языка
     cur = catalog._user_labels().get(account, {})

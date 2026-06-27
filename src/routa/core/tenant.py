@@ -77,7 +77,7 @@ def current() -> int:
 def require_current() -> int:
     t = _current.get()
     if not t:
-        raise PermissionError("tenant не установлен")
+        raise PermissionError("error_tenant_missing")
     return t
 
 
@@ -104,7 +104,7 @@ def verify_password(password: str, stored: str) -> bool:
 def create_user(login: str, password: str, email: str = "") -> int:
     login = login.strip().lower()
     if not login or not password:
-        raise ValueError("логин и пароль обязательны")
+        raise ValueError("error_login_password_required")
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with _conn() as con:
         cur = con.execute(

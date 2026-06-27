@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from routa.core import constants, engine, entry_meta, lexicon, money
+from routa.core import constants, engine, entry_meta, glossary, lexicon, money
 from routa.web.api.common import (
     _clabel, _human_label, _label, _lex_chat,
 )
@@ -42,13 +42,13 @@ async def post_entry(payload: dict):
         if amount <= 0:
             raise InvalidOperation
     except (KeyError, InvalidOperation, ValueError):
-        return JSONResponse({"error": "сумма должна быть положительным числом"}, status_code=400)
+        return JSONResponse({"error": "error_amount_positive"}, status_code=400)
     op = payload.get("op", "expense")
     debit, credit = payload.get("debit"), payload.get("credit")
     accounts = await engine.list_accounts()
     acc_map = {a["name"]: a for a in accounts}
     if debit not in acc_map or credit not in acc_map:
-        return JSONResponse({"error": "неизвестный счёт"}, status_code=400)
+        return JSONResponse({"error": "error_unknown_account"}, status_code=400)
     remark = (payload.get("remark") or "").strip() or _human_label(debit, acc_map[debit])
     # Дата возникновения транзакции (не путать с моментом внесения записи):
     # пользователь может указать когда транзакция реально произошла. По умолчанию
@@ -75,14 +75,14 @@ async def recategorize(entry_id: str, payload: dict):
     accounts = await engine.list_accounts()
     acc_map = {a["name"]: a for a in accounts}
     if new_debit not in acc_map:
-        return JSONResponse({"error": "неизвестный счёт"}, status_code=400)
+        return JSONResponse({"error": "error_unknown_account"}, status_code=400)
     rows = await engine.recent_entries(limit=constants.get("recent_entries_limit"))
     old = next((r for r in rows if r["name"] == entry_id), None)
     if old is None:
-        return JSONResponse({"error": "запись не найдена"}, status_code=404)
+        return JSONResponse({"error": "error_entry_not_found"}, status_code=404)
     accs = await engine.entry_accounts(entry_id)
     if not accs:
-        return JSONResponse({"error": "не смог прочитать счета записи"}, status_code=500)
+        return JSONResponse({"error": "error_entry_accounts_read"}, status_code=500)
     await engine.cancel_journal_entry(entry_id)
     new_id = await engine.post_journal_entry(
         old["posting_date"] if isinstance(old["posting_date"], date)

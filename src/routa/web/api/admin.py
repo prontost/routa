@@ -37,7 +37,7 @@ async def admin_settings_update(payload: dict, admin_id: int = Depends(require_a
         if key not in allowed:
             continue
         if key == "registration_mode" and value not in ("open", "invite", "closed"):
-            return JSONResponse({"error": "invalid_mode"}, status_code=400)
+            return JSONResponse({"error": "error_invalid_mode"}, status_code=400)
         if key == "strict_password_policy":
             value = "true" if str(value).strip().lower() in ("1", "true", "yes", "on") else "false"
         global_settings.set(key, str(value))
@@ -133,7 +133,7 @@ async def admin_constants_update(payload: dict, admin_id: int = Depends(require_
     updates = payload.get("updates", {})
     for key, value in updates.items():
         if key not in constants.DEFAULTS:
-            return JSONResponse({"error": f"unknown_constant: {key}"}, status_code=400)
+            return JSONResponse({"error": "error_unknown_constant"}, status_code=400)
         default = constants.DEFAULTS[key]
         try:
             if isinstance(default, bool):
@@ -145,7 +145,7 @@ async def admin_constants_update(payload: dict, admin_id: int = Depends(require_
             elif isinstance(default, Decimal):
                 Decimal(value)
         except Exception:
-            return JSONResponse({"error": f"invalid_value: {key}"}, status_code=400)
+            return JSONResponse({"error": "error_invalid_value"}, status_code=400)
         global_settings.set(key, str(value))
     return {"ok": True, "constants": constants.all_effective()}
 
@@ -157,7 +157,7 @@ async def admin_add(payload: dict, admin_id: int = Depends(require_admin)):
     login = (payload.get("login") or "").strip().lower()
     u = tenant.get_user_by_login(login)
     if not u:
-        return JSONResponse({"error": "user_not_found"}, status_code=404)
+        return JSONResponse({"error": "error_user_not_found"}, status_code=404)
     tenant.add_admin(u["id"])
     return {"ok": True, "id": u["id"], "login": u["login"]}
 
@@ -229,9 +229,9 @@ async def admin_config_update(payload: dict, admin_id: int = Depends(require_adm
         if key not in allowed:
             continue
         if key == "registration_mode" and value not in ("open", "invite", "closed"):
-            return JSONResponse({"error": "invalid_mode"}, status_code=400)
+            return JSONResponse({"error": "error_invalid_mode"}, status_code=400)
         if key == "default_currency" and value not in currency.ALL:
-            return JSONResponse({"error": "invalid_currency"}, status_code=400)
+            return JSONResponse({"error": "error_invalid_currency"}, status_code=400)
         if key == "strict_password_policy":
             value = "true" if str(value).strip().lower() in ("1", "true", "yes", "on") else "false"
         global_settings.set(key, str(value))
@@ -250,10 +250,10 @@ async def admin_reset_password(user_id: int, admin_id: int = Depends(require_adm
     """Admins: generate a one-time password reset link for a user."""
     from datetime import datetime, timedelta, timezone
     if user_id == admin_id:
-        return JSONResponse({"error": "cannot_reset_self"}, status_code=400)
+        return JSONResponse({"error": "error_cannot_reset_self"}, status_code=400)
     u = tenant.get_user(user_id)
     if not u:
-        return JSONResponse({"error": "user_not_found"}, status_code=404)
+        return JSONResponse({"error": "error_user_not_found"}, status_code=404)
     token = security.new_token()
     expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(timespec="seconds")
     tenant.set_reset_token(user_id, token, expires)
@@ -265,13 +265,13 @@ async def admin_reset_password(user_id: int, admin_id: int = Depends(require_adm
 async def admin_delete_user(user_id: int, admin_id: int = Depends(require_admin)):
     """Admins: delete user and all their data."""
     if user_id == admin_id:
-        return JSONResponse({"error": "cannot_delete_self"}, status_code=400)
+        return JSONResponse({"error": "error_cannot_delete_self"}, status_code=400)
     admins = tenant.list_admins()
     if any(a["id"] == user_id for a in admins) and len(admins) <= 1:
-        return JSONResponse({"error": "last_admin"}, status_code=400)
+        return JSONResponse({"error": "error_last_admin"}, status_code=400)
     u = tenant.get_user(user_id)
     if not u:
-        return JSONResponse({"error": "user_not_found"}, status_code=404)
+        return JSONResponse({"error": "error_user_not_found"}, status_code=404)
     tenant.delete_user(user_id)
     return {"ok": True}
 
@@ -291,7 +291,7 @@ async def admin_set_user_app(payload: dict, admin_id: int = Depends(require_admi
     app_id = (payload.get("app_id") or "").strip()
     enabled = bool(payload.get("enabled"))
     if not isinstance(user_id, int) or not app_id:
-        return JSONResponse({"error": "user_id and app_id required"}, status_code=400)
+        return JSONResponse({"error": "error_user_app_required"}, status_code=400)
     try:
         app_access.set_access(user_id, app_id, enabled)
     except ValueError as e:

@@ -43,7 +43,7 @@ def get(key: str) -> str | None:
 def set(key: str, value: str) -> None:
     """Only instance admins are allowed to change global settings."""
     if not tenant.is_admin(tenant.current()):
-        raise PermissionError("only admins can change global settings")
+        raise PermissionError("error_admin_only")
     with _conn() as con:
         con.execute(
             "INSERT INTO work_global_settings (key, value) VALUES (?,?) "

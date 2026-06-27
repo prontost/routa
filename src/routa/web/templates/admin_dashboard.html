@@ -1,91 +1,96 @@
 {% extends "base.html" %}
 {% block body %}
+<script>
+const I18N = {{ i18n_js() | tojson }};
+function T(k){ const l = document.documentElement.lang || 'ru'; return (I18N[l] && I18N[l][k]) || I18N.ru[k] || k; }
+function fmtError(msg){ return T('label_error_prefix').replace('{msg}', msg); }
+</script>
 <style>
   label { display:block; color:var(--muted); font-size:13px; margin-top:12px; }
   input, select { width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--txt); font-size:14px; margin-top:4px; }
   #config-form { margin-top:6px; }
   #logs { white-space:pre-wrap; word-break:break-word; }
 </style>
-<h1>Админ — Работа</h1>
-<p class="muted">Панель управления инстансом · build {{ build_id }}</p>
+<h1>{{ t('admin_title') }}</h1>
+<p class="muted">{{ t('admin_subtitle') }} {{ build_id }}</p>
 
 <section>
-  <h2>Инстанс</h2>
-  <div id="stats">Загрузка…</div>
+  <h2>{{ t('section_instance') }}</h2>
+  <div id="stats">{{ t('label_loading') }}</div>
 </section>
 
 <section>
-  <h2>Конфигурация</h2>
+  <h2>{{ t('section_config') }}</h2>
   <form id="config-form" style="max-width:480px">
-    <label>Режим регистрации</label>
+    <label>{{ t('label_reg_mode') }}</label>
     <select id="cfg-reg-mode">
-      <option value="open">Открытая</option>
-      <option value="invite">По приглашению</option>
-      <option value="closed">Закрыта</option>
+      <option value="open">{{ t('label_reg_mode_open') }}</option>
+      <option value="invite">{{ t('label_reg_mode_invite') }}</option>
+      <option value="closed">{{ t('label_reg_mode_closed') }}</option>
     </select>
     <div id="cfg-invite-wrap" style="display:none;margin-top:10px">
-      <label>Код приглашения</label>
+      <label>{{ t('label_invite_code') }}</label>
       <input type="text" id="cfg-invite-code" autocomplete="off">
     </div>
 
     <label style="margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer">
       <input type="checkbox" id="cfg-strict-pw">
-      Строгая политика паролей (≥8, заглавная, строчная, цифра, спецсимвол)
+      {{ t('label_strict_pw') }}
     </label>
 
-    <label style="margin-top:14px">Базовая валюта</label>
+    <label style="margin-top:14px">{{ t('label_base_currency') }}</label>
     <select id="cfg-currency"></select>
 
-    <label style="margin-top:14px">LLM-провайдер</label>
+    <label style="margin-top:14px">{{ t('label_llm_provider') }}</label>
     <select id="cfg-llm-provider"></select>
 
-    <label style="margin-top:14px">LLM-модель</label>
+    <label style="margin-top:14px">{{ t('label_llm_model') }}</label>
     <select id="cfg-llm-model"></select>
     <input type="hidden" id="cfg-llm-full">
 
-    <label style="margin-top:14px">Fallback LLM-модель</label>
+    <label style="margin-top:14px">{{ t('label_llm_fallback') }}</label>
     <input type="text" id="cfg-llm-fallback" autocomplete="off">
 
-    <label style="margin-top:14px">STT-модель</label>
+    <label style="margin-top:14px">{{ t('label_stt_model') }}</label>
     <select id="cfg-stt-model"></select>
 
-    <label style="margin-top:14px">Web base URL</label>
+    <label style="margin-top:14px">{{ t('label_web_base_url') }}</label>
     <input type="text" id="cfg-web-url" autocomplete="off">
 
-    <button type="submit" class="btn" style="margin-top:18px;width:100%">Сохранить настройки</button>
+    <button type="submit" class="btn" style="margin-top:18px;width:100%">{{ t('btn_save_settings') }}</button>
     <p id="config-msg" style="margin-top:8px;font-size:13px"></p>
   </form>
 
-  <h3 style="margin-top:20px;color:var(--muted);font-size:13px;text-transform:uppercase">Статические константы</h3>
-  <div id="static-constants">Загрузка…</div>
+  <h3 style="margin-top:20px;color:var(--muted);font-size:13px;text-transform:uppercase">{{ t('heading_static_constants') }}</h3>
+  <div id="static-constants">{{ t('label_loading') }}</div>
 </section>
 
 <section>
-  <h2>Константы runtime</h2>
-  <p class="muted">Числовые пороги, таймауты и лимиты. Меняются без перезапуска.</p>
-  <div id="constants-list" style="max-width:480px">Загрузка…</div>
-  <button class="btn" style="margin-top:14px;width:100%;max-width:480px" onclick="saveConstants()">Сохранить константы</button>
+  <h2>{{ t('section_runtime_constants') }}</h2>
+  <p class="muted">{{ t('hint_runtime_constants') }}</p>
+  <div id="constants-list" style="max-width:480px">{{ t('label_loading') }}</div>
+  <button class="btn" style="margin-top:14px;width:100%;max-width:480px" onclick="saveConstants()">{{ t('btn_save_constants') }}</button>
   <p id="constants-msg" style="margin-top:8px;font-size:13px"></p>
 </section>
 
 <section>
-  <h2>Секреты (read-only)</h2>
-  <p class="muted">Меняются через env-переменные / launchctl / plist сервиса.</p>
-  <div id="secrets">Загрузка…</div>
+  <h2>{{ t('section_secrets') }}</h2>
+  <p class="muted">{{ t('hint_secrets') }}</p>
+  <div id="secrets">{{ t('label_loading') }}</div>
 </section>
 
 <section>
-  <h2>Пользователи</h2>
-  <div id="users">Загрузка…</div>
+  <h2>{{ t('section_users') }}</h2>
+  <div id="users">{{ t('label_loading') }}</div>
 </section>
 
 <section>
-  <h2>Администраторы</h2>
-  <div id="admins">Загрузка…</div>
+  <h2>{{ t('section_admins') }}</h2>
+  <div id="admins">{{ t('label_loading') }}</div>
   <form id="add-admin-form" style="max-width:320px;margin-top:14px">
-    <label>Добавить администратора (логин)</label>
+    <label>{{ t('label_add_admin') }}</label>
     <div style="display:flex;gap:8px">
-      <input type="text" id="add-admin-login" placeholder="логин" style="flex:1">
+      <input type="text" id="add-admin-login" placeholder="{{ t('placeholder_login') }}" style="flex:1">
       <button type="submit" class="btn" style="padding:10px 14px">+</button>
     </div>
     <p id="add-admin-msg" style="margin-top:6px;font-size:13px"></p>
@@ -93,33 +98,33 @@
 </section>
 
 <section>
-  <h2>Логи</h2>
+  <h2>{{ t('section_logs') }}</h2>
   <div style="display:flex;gap:8px;margin-bottom:10px">
-    <button class="btn" onclick="loadLogs()" type="button">Обновить</button>
+    <button class="btn" onclick="loadLogs()" type="button">{{ t('btn_refresh') }}</button>
     <span id="log-path" class="muted" style="align-self:center"></span>
   </div>
-  <pre id="logs" style="background:#0b0d12;color:#c9d1d9;padding:12px;border-radius:8px;max-height:400px;overflow:auto;font-size:12px;margin:0">Загрузка…</pre>
+  <pre id="logs" style="background:#0b0d12;color:#c9d1d9;padding:12px;border-radius:8px;max-height:400px;overflow:auto;font-size:12px;margin:0">{{ t('label_loading') }}</pre>
 </section>
 
 <section style="border-color:var(--red)">
-  <h2>Опасная зона</h2>
-  <p class="muted">Перезапускает весь сервис. launchd поднимет процесс заново.</p>
-  <button class="btn" style="background:var(--red)" onclick="restartService()" type="button">🔄 Перезапустить Работу</button>
+  <h2>{{ t('section_danger') }}</h2>
+  <p class="muted">{{ t('hint_danger_restart') }}</p>
+  <button class="btn" style="background:var(--red)" onclick="restartService()" type="button">🔄 {{ t('btn_restart_work') }}</button>
   <p id="restart-msg" style="margin-top:8px;font-size:13px"></p>
 </section>
 
 <section>
-  <h2>QR-код приложения</h2>
-  <p class="muted">Ссылка на главную страницу Работы.</p>
+  <h2>{{ t('section_qr') }}</h2>
+  <p class="muted">{{ t('hint_qr') }}</p>
   <div id="qr-wrap"></div>
 </section>
 
 <section>
-  <h2>Health</h2>
-  <div id="health">Загрузка…</div>
+  <h2>{{ t('section_health') }}</h2>
+  <div id="health">{{ t('label_loading') }}</div>
 </section>
 
-<p style="margin-top:20px"><a href="/logout" style="color:var(--red)">Выйти</a></p>
+<p style="margin-top:20px"><a href="/logout" style="color:var(--red)">{{ t('btn_logout') }}</a></p>
 
 <script>
 function $(id){ return document.getElementById(id); }
@@ -130,15 +135,15 @@ let CFG_OPTIONS = {};
 
 async function loadStats(){
   const d = await api('/stats');
-  $('stats').innerHTML = d.error ? d.error : `
+  $('stats').innerHTML = d.error ? T(d.error) : `
     <div class="cards">
-      <div class="card"><div class="label">Пользователи</div><div class="val">${d.users}</div></div>
-      <div class="card"><div class="label">Записи</div><div class="val">${d.entries}</div></div>
-      <div class="card"><div class="label">Валюты</div><div class="val">${d.currencies}</div></div>
+      <div class="card"><div class="label">${T('label_users')}</div><div class="val">${d.users}</div></div>
+      <div class="card"><div class="label">${T('label_entries')}</div><div class="val">${d.entries}</div></div>
+      <div class="card"><div class="label">${T('label_currencies')}</div><div class="val">${d.currencies}</div></div>
     </div>
-    <div class="row"><span>База данных</span><span class="num">${d.db_path}</span></div>
-    <div class="row"><span>Размер БД</span><span class="num">${fmtBytes(d.db_size)}</span></div>
-    <div class="row"><span>Build</span><span class="num">${d.build_id}</span></div>
+    <div class="row"><span>${T('label_database')}</span><span class="num">${d.db_path}</span></div>
+    <div class="row"><span>${T('label_db_size')}</span><span class="num">${fmtBytes(d.db_size)}</span></div>
+    <div class="row"><span>${T('label_build')}</span><span class="num">${d.build_id}</span></div>
   `;
 }
 
@@ -148,7 +153,7 @@ function buildSelect(el, options, value){
 
 async function loadConfig(){
   const d = await api('/config');
-  if(d.error){ $('config-msg').textContent = d.error; return; }
+  if(d.error){ $('config-msg').textContent = T(d.error); return; }
   CFG_OPTIONS = d.options || {};
   const r = d.runtime;
   $('cfg-reg-mode').value = r.registration_mode;
@@ -202,13 +207,13 @@ $('config-form').addEventListener('submit', async e=>{
     web_base_url: $('cfg-web-url').value.trim(),
   });
   const d = await api('/config',{method:'POST',headers:{'Content-Type':'application/json'},body});
-  $('config-msg').textContent = d.error ? 'Ошибка: '+d.error : 'Сохранено';
+  $('config-msg').textContent = d.error ? fmtError(T(d.error)) : T('label_saved');
   $('config-msg').style.color = d.error ? 'var(--red)' : 'var(--green)';
 });
 
 async function loadSecrets(){
   const d = await api('/config');
-  if(d.error){ $('secrets').textContent = d.error; return; }
+  if(d.error){ $('secrets').textContent = T(d.error); return; }
   const e = d.env;
   $('secrets').innerHTML = Object.entries(e).map(([k,v])=>
     `<div class="row"><span>${k}</span><span class="num" style="font-family:monospace">${v}</span></div>`
@@ -217,16 +222,16 @@ async function loadSecrets(){
 
 async function loadUsers(){
   const d = await api('/users');
-  if(d.error){ $('users').textContent = d.error; return; }
-  if(!d.users.length){ $('users').innerHTML = '<p class="muted">Нет пользователей</p>'; return; }
+  if(d.error){ $('users').textContent = T(d.error); return; }
+  if(!d.users.length){ $('users').innerHTML = `<p class="muted">${T('label_no_users')}</p>`; return; }
   $('users').innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-    <tr style="text-align:left;color:var(--muted)"><th>ID</th><th>Логин</th><th>Почта</th><th>Подтв.</th><th>Записей</th><th>Создан</th><th>Действия</th></tr>
+    <tr style="text-align:left;color:var(--muted)"><th>${T('label_id')}</th><th>${T('label_login')}</th><th>${T('label_email')}</th><th>${T('label_verified')}</th><th>${T('label_entries')}</th><th>${T('label_created')}</th><th>${T('label_actions')}</th></tr>
     ${d.users.map(u=>`<tr style="border-top:1px solid var(--line)">
       <td>${u.id}</td><td>${u.login}</td><td>${u.email||'—'}</td>
       <td>${u.email_verified?'✓':'—'}</td><td>${u.entries}</td><td>${u.created_at.slice(0,10)}</td>
       <td>
-        <button class="btn" style="padding:4px 8px;font-size:12px" onclick="resetPassword(${u.id},'${u.login}')">Сбросить пароль</button>
-        <button class="btn" style="padding:4px 8px;font-size:12px;background:var(--red)" onclick="deleteUser(${u.id},'${u.login}')">Удалить</button>
+        <button class="btn" style="padding:4px 8px;font-size:12px" onclick="resetPassword(${u.id},'${u.login}')">${T('btn_reset_password')}</button>
+        <button class="btn" style="padding:4px 8px;font-size:12px;background:var(--red)" onclick="deleteUser(${u.id},'${u.login}')">${T('btn_delete_user')}</button>
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
           ${(u.apps||[]).map(a=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:var(--muted)">
             <input type="checkbox" onchange="toggleUserApp(${u.id},'${a.id}',this.checked)" ${a.enabled?'checked':''}> ${a.icon||''} ${a.name}
@@ -241,43 +246,43 @@ async function toggleUserApp(user_id, app_id, enabled){
   const d = await api('/user-apps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id, app_id, enabled})});
   const el = $('user-action-msg');
   if(d.error){
-    el.textContent = 'Ошибка: '+d.error;
+    el.textContent = fmtError(T(d.error));
     el.style.color = 'var(--red)';
   } else {
-    el.textContent = 'Сохранено';
+    el.textContent = T('label_saved');
     el.style.color = 'var(--green)';
   }
 }
 async function resetPassword(id,login){
-  if(!confirm('Сбросить пароль пользователю '+login+'?')) return;
+  if(!confirm(T('confirm_reset_password').replace('{login}', login))) return;
   const d = await api('/users/'+id+'/reset-password',{method:'POST'});
   const el = $('user-action-msg');
   if(d.error){
-    el.textContent = 'Ошибка: '+d.error;
+    el.textContent = fmtError(T(d.error));
     el.style.color = 'var(--red)';
     return;
   }
-  el.innerHTML = `<span style="color:var(--green)">Ссылка для сброса пароля для ${d.login} (действительна ${d.expires_min} мин):</span><br>
+  el.innerHTML = `<span style="color:var(--green)">${T('label_reset_link').replace('{login}', d.login).replace('{expires_min}', d.expires_min)}</span><br>
     <a href="${d.reset_link}" target="_blank" style="word-break:break-all;color:var(--accent)">${d.reset_link}</a>
-    <button class="btn" style="margin-top:6px;padding:4px 8px;font-size:12px" onclick="navigator.clipboard.writeText('${d.reset_link}').then(()=>toast('Скопировано'))">Скопировать</button>`;
+    <button class="btn" style="margin-top:6px;padding:4px 8px;font-size:12px" onclick="navigator.clipboard.writeText('${d.reset_link}').then(()=>toast(T('label_copied')))">${T('btn_copy')}</button>`;
 }
 async function deleteUser(id,login){
-  if(!confirm('УДАЛИТЬ пользователя '+login+' и ВСЕ его данные? Это необратимо.')) return;
+  if(!confirm(T('confirm_delete_user').replace('{login}', login))) return;
   const d = await api('/users/'+id,{method:'DELETE'});
-  $('user-action-msg').textContent = d.error ? 'Ошибка: '+d.error : 'Пользователь удалён';
+  $('user-action-msg').textContent = d.error ? fmtError(T(d.error)) : T('label_user_deleted');
   $('user-action-msg').style.color = d.error ? 'var(--red)' : 'var(--green)';
   if(!d.error) loadUsers();
 }
 
 async function loadAdmins(){
   const d = await api('/admins');
-  if(d.error){ $('admins').textContent = d.error; return; }
+  if(d.error){ $('admins').textContent = T(d.error); return; }
   $('admins').innerHTML = d.admins.map(a=>
-    `<div class="row"><span>${a.login}</span><button class="btn" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:4px 10px" onclick="removeAdmin(${a.id})">Удалить</button></div>`
-  ).join('') || '<p class="muted">Нет администраторов</p>';
+    `<div class="row"><span>${a.login}</span><button class="btn" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:4px 10px" onclick="removeAdmin(${a.id})">${T('btn_delete_user')}</button></div>`
+  ).join('') || `<p class="muted">${T('label_no_admins')}</p>`;
 }
 async function removeAdmin(id){
-  if(!confirm('Снять права администратора?')) return;
+  if(!confirm(T('confirm_remove_admin'))) return;
   await api('/admins/'+id,{method:'DELETE'});
   loadAdmins();
 }
@@ -285,21 +290,21 @@ $('add-admin-form').addEventListener('submit', async e=>{
   e.preventDefault();
   const login = $('add-admin-login').value.trim();
   const d = await api('/admins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login})});
-  $('add-admin-msg').textContent = d.error ? 'Ошибка: '+d.error : 'Добавлен: '+d.login;
+  $('add-admin-msg').textContent = d.error ? fmtError(T(d.error)) : T('label_admin_added').replace('{login}', d.login);
   $('add-admin-msg').style.color = d.error ? 'var(--red)' : 'var(--green)';
   if(!d.error){ $('add-admin-login').value=''; loadAdmins(); loadUsers(); }
 });
 
 async function loadLogs(){
   const d = await api('/logs?lines=200');
-  $('logs').textContent = d.error ? d.error : (d.lines.join('') || '(пусто)');
+  $('logs').textContent = d.error ? T(d.error) : (d.lines.join('') || T('label_empty_logs'));
   $('log-path').textContent = d.path || '';
   $('logs').scrollTop = $('logs').scrollHeight;
 }
 
 async function loadConstantsList(){
   const d = await api('/constants');
-  if(d.error){ $('constants-list').textContent = d.error; return; }
+  if(d.error){ $('constants-list').textContent = T(d.error); return; }
   $('constants-list').innerHTML = d.constants.map(c=>{
     const inputType = c.type === 'bool' ? 'checkbox' : (c.type === 'int' || c.type === 'float' || c.type === 'Decimal' ? 'number' : 'text');
     const step = c.type === 'int' ? '1' : 'any';
@@ -313,7 +318,7 @@ async function loadConstantsList(){
 }
 async function saveConstants(){
   const d = await api('/constants');
-  if(d.error){ $('constants-msg').textContent = d.error; return; }
+  if(d.error){ $('constants-msg').textContent = T(d.error); return; }
   const updates = {};
   for(const c of d.constants){
     const el = $('const-'+c.key);
@@ -322,23 +327,23 @@ async function saveConstants(){
     else { updates[c.key] = el.value; }
   }
   const r = await api('/constants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates})});
-  $('constants-msg').textContent = r.error ? 'Ошибка: '+r.error : 'Сохранено';
+  $('constants-msg').textContent = r.error ? fmtError(T(r.error)) : T('label_saved');
   $('constants-msg').style.color = r.error ? 'var(--red)' : 'var(--green)';
 }
 
 async function restartService(){
-  if(!confirm('Перезапустить Работу? Сервис будет недоступен несколько секунд.')) return;
-  if(!confirm('Точно? Все активные сессии прервутся.')) return;
+  if(!confirm(T('label_restart_confirm1'))) return;
+  if(!confirm(T('label_restart_confirm2'))) return;
   const d = await api('/restart',{method:'POST'});
-  $('restart-msg').textContent = d.error ? 'Ошибка: '+d.error : 'Перезапуск… обновите страницу через несколько секунд.';
+  $('restart-msg').textContent = d.error ? fmtError(T(d.error)) : T('label_restart_wait');
   $('restart-msg').style.color = d.error ? 'var(--red)' : 'var(--green)';
 }
 
 async function loadHealth(){
   const d = await api('/health');
-  $('health').innerHTML = d.error ? d.error : `
-    <div class="row"><span>БД доступна</span><span style="color:${d.db_ok?'var(--green)':'var(--red)'}">${d.db_ok?'OK':'FAIL'}</span></div>
-    <div class="row"><span>Путь к БД</span><span class="num">${d.db_path}</span></div>
+  $('health').innerHTML = d.error ? T(d.error) : `
+    <div class="row"><span>${T('label_db_available')}</span><span style="color:${d.db_ok?'var(--green)':'var(--red)'}">${d.db_ok?T('label_ok'):T('label_fail')}</span></div>
+    <div class="row"><span>${T('label_db_path')}</span><span class="num">${d.db_path}</span></div>
   `;
 }
 

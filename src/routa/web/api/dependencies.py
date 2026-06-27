@@ -19,6 +19,6 @@ def require_admin(tid: int = Depends(current_tenant)) -> int:
     if not tenant.is_admin(tid):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="forbidden",
+            detail="error_forbidden",
         )
     return tid

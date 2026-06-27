@@ -4,7 +4,7 @@ import secrets
 import sqlite3
 from datetime import datetime, timezone
 
-from routa.core import tenant
+from routa.core import glossary, tenant
 from routa.core.db import DB_PATH
 
 _SCHEMA = """
@@ -89,7 +89,7 @@ def update_trip(trip_id: int, direction: str | None = None, trip_date: str | Non
     with _conn() as con:
         trip = con.execute("SELECT tenant_id FROM work_trips WHERE id=?", (trip_id,)).fetchone()
         if not trip or trip["tenant_id"] != tid:
-            raise PermissionError("only creator can edit")
+            raise PermissionError("error_trip_creator_edit")
         con.execute(f"UPDATE work_trips SET {', '.join(fields)} WHERE id=?", params)
     return get_trip(trip_id)
 
@@ -99,7 +99,7 @@ def delete_trip(trip_id: int) -> None:
     with _conn() as con:
         trip = con.execute("SELECT tenant_id FROM work_trips WHERE id=?", (trip_id,)).fetchone()
         if not trip or trip["tenant_id"] != tid:
-            raise PermissionError("only creator can delete")
+            raise PermissionError("error_trip_creator_delete")
         con.execute("DELETE FROM work_trips WHERE id=?", (trip_id,))
 
 
@@ -163,9 +163,9 @@ def join_trip(trip_id: int, role: str = "unknown", seats: int = 0) -> dict:
     with _conn() as con:
         trip = con.execute("SELECT id, status FROM work_trips WHERE id=?", (trip_id,)).fetchone()
         if not trip:
-            raise ValueError("trip not found")
+            raise ValueError("error_trip_not_found")
         if trip["status"] != "open":
-            raise ValueError("trip is closed or cancelled")
+            raise ValueError("error_trip_closed")
         con.execute(
             "INSERT OR REPLACE INTO work_trip_members (trip_id, tenant_id, role, seats, updated_at) VALUES (?, ?, ?, ?, ?)",
             (trip_id, tid, role, seats, _now()),
@@ -177,7 +177,7 @@ def join_trip_by_code(invite_code: str, role: str = "unknown", seats: int = 0) -
     with _conn() as con:
         row = con.execute("SELECT id FROM work_trips WHERE invite_code=?", (invite_code,)).fetchone()
         if not row:
-            raise ValueError("invalid invite code")
+            raise ValueError("error_invalid_invite_code")
         trip_id = row["id"]
     return join_trip(trip_id, role, seats)
 
@@ -197,7 +197,7 @@ def update_member(trip_id: int, member_tid: int, role: str, seats: int = 0) -> d
             (trip_id, current_tid),
         ).fetchone()
         if not is_member:
-            raise PermissionError("not a member of this trip")
+            raise PermissionError("error_not_member")
         con.execute(
             "INSERT OR REPLACE INTO work_trip_members (trip_id, tenant_id, role, seats, updated_at) VALUES (?, ?, ?, ?, ?)",
             (trip_id, member_tid, role, seats, _now()),
