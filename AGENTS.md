@@ -3,7 +3,7 @@
 > Project-specific handoff and operating rules for Routa.
 > If you lost context, read this file first, then `README.md`, then run tests.
 >
-> Last updated: 2026-06-14 — after creation from Counta and app-switcher removal.
+> Last updated: 2026-06-23 — class-based architecture rules added; tenant/user refactor follows Counta.
 
 ## 0. Quick recovery for a new agent
 
@@ -326,3 +326,75 @@ Later, a public landing page can be added without changing the auth flow.
 - Do not modify or delete `~/.avalone/avalone.db` without a backup.
 - Do not run Docker commands for ERPNext — it is gone.
 - Any ledger change must keep `assert_balanced()` true.
+
+## Class-based architecture (enforced)
+
+All new and refactored code must be organized as classes. Free functions with business logic are no longer allowed in `core/` or `web/api/`.
+
+### Layer rules
+
+| Layer | Naming | Responsibility |
+|-------|--------|----------------|
+| Domain models | `User`, `Account`, `Entry`, `Trip`, ... | `dataclasses`/`pydantic.BaseModel` with data and validation only. |
+| Repositories | `*Repository` | SQL only. One repository per aggregate root. Receive `Database`/`Connection` via constructor. |
+| Services | `*Service` | Business logic, rules, orchestration. Depend on repositories and other services via constructor. |
+| API routers | `*router` (FastAPI) | Thin: validate input, call service via `Depends(get_*_service)`, return response. |
+| Infrastructure | `Database`, `UnitOfWork`, `Settings` | Connection management, config, logging. |
+
+### Hard rules
+
+- One public class per file, named after the file (`PascalCase`).
+- No top-level business functions in `core/*.py` or `web/api/*.py`. Private helpers inside classes are OK.
+- All SQL lives in repositories.
+- All `glossary.t(...)` calls live in services or repositories, never in templates (templates already use `t()` via Jinja).
+- API endpoints use FastAPI `Depends` to get services; services are instantiated once per request (or shared via `request.state`).
+- Prefer constructor injection. Avoid module-level mutable state.
+
+### Example: adding a new endpoint
+
+1. Add/update domain model in `core/models.py` (or domain-specific file).
+2. Add repository method in `core/<aggregate>_repository.py`.
+3. Add service method in `core/<domain>_service.py`.
+4. Expose via `get_<domain>_service()` in `web/api/dependencies.py`.
+5. Add endpoint in `web/api/<domain>.py` using `Depends(...)`.
+
+### Example: adding a new entity
+
+```python
+# core/models.py
+from dataclasses import dataclass
+
+@dataclass
+class Trip:
+    id: int
+    direction: str
+    date: str
+
+# core/trip_repository.py
+class TripRepository:
+    def __init__(self, db):
+        self._db = db
+
+    def list_for_tenant(self, tenant_id: int) -> list[Trip]: ...
+
+# core/trip_service.py
+class TripService:
+    def __init__(self, repo: TripRepository):
+        self._repo = repo
+
+    def upcoming(self, tenant_id: int) -> list[Trip]: ...
+
+# web/api/dependencies.py
+def get_trip_service() -> TripService: ...
+
+# web/api/trips.py
+from fastapi import APIRouter, Depends
+from routa.core.trip_service import TripService
+from routa.web.api.dependencies import get_trip_service
+
+router = APIRouter()
+
+@router.get("/trips")
+async def list_trips(service: TripService = Depends(get_trip_service)):
+    return service.upcoming(...)
+```
