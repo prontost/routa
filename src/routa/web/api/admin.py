@@ -10,26 +10,57 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
-from routa.core import app_access, config, constants, currency, db, global_settings, money, security, tenant
-from routa.web.api.dependencies import require_admin
+from avalone_core import glossary_db as glossary
+from routa.core import config, constants, currency, db, money, security
+from routa.core.app_access_service import AppAccessService
+from routa.core.config import settings
+from routa.core.global_settings_service import GlobalSettingsService
+from routa.core.tenant import OWNER_TENANT_ID, TenantService
+from routa.web.api.dependencies import (
+    get_app_access_service,
+    get_global_settings_service,
+    get_user_service,
+    require_admin,
+)
+
+
+def _t(key: str) -> str:
+    """Admin dashboard is Russian-only for now; translate glossary key."""
+    return glossary.t(key, lang="ru")
+
+
+def _build_id() -> str:
+    """Lazy import to avoid a circular import with web.app."""
+    from routa.web.app import BUILD_ID
+
+    return BUILD_ID
+
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin")
 
 
 @router.get("/settings")
-async def admin_settings(admin_id: int = Depends(require_admin)):
+async def admin_settings(
+    admin_id: int = Depends(require_admin),
+    global_settings_service: GlobalSettingsService = Depends(get_global_settings_service),
+):
     """Admins: current global settings like registration mode."""
     del admin_id
+    runtime = global_settings_service.get_runtime()
     return {
-        "registration_mode": config.registration_mode(),
-        "registration_invite_code": config.registration_invite_code(),
-        "strict_password_policy": config.strict_password_policy(),
+        "registration_mode": runtime["registration_mode"],
+        "registration_invite_code": runtime["registration_invite_code"],
+        "strict_password_policy": runtime["strict_password_policy"],
     }
 
 
 @router.post("/settings")
-async def admin_settings_update(payload: dict, admin_id: int = Depends(require_admin)):
+async def admin_settings_update(
+    payload: dict,
+    admin_id: int = Depends(require_admin),
+    global_settings_service: GlobalSettingsService = Depends(get_global_settings_service),
+):
     """Admins: update global settings."""
     del admin_id
     allowed = {"registration_mode", "registration_invite_code", "strict_password_policy"}
@@ -37,70 +68,67 @@ async def admin_settings_update(payload: dict, admin_id: int = Depends(require_a
         if key not in allowed:
             continue
         if key == "registration_mode" and value not in ("open", "invite", "closed"):
-            return JSONResponse({"error": "error_invalid_mode"}, status_code=400)
+            return JSONResponse({"error": _t("error_invalid_mode")}, status_code=400)
         if key == "strict_password_policy":
             value = "true" if str(value).strip().lower() in ("1", "true", "yes", "on") else "false"
-        global_settings.set(key, str(value))
+        global_settings_service.set(key, str(value))
+    runtime = global_settings_service.get_runtime()
     return {
-        "registration_mode": config.registration_mode(),
-        "registration_invite_code": config.registration_invite_code(),
-        "strict_password_policy": config.strict_password_policy(),
+        "registration_mode": runtime["registration_mode"],
+        "registration_invite_code": runtime["registration_invite_code"],
+        "strict_password_policy": runtime["strict_password_policy"],
     }
 
 
 @router.get("/users")
-async def admin_users(admin_id: int = Depends(require_admin)):
+async def admin_users(
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+    app_access_service: AppAccessService = Depends(get_app_access_service),
+):
     """Admins: list all users with entry counts and app access."""
     del admin_id
-    with tenant._conn() as con:
-        rows = con.execute(
-            "SELECT u.id, u.login, u.email, u.email_verified, u.created_at, "
-            "(SELECT COUNT(*) FROM work_led_entries e WHERE e.tenant=u.id) as entries "
-            "FROM users u ORDER BY u.id"
-        ).fetchall()
+    users = user_service.list_users()
     return {
         "users": [
             {
-                "id": r[0],
-                "login": r[1],
-                "email": r[2],
-                "email_verified": bool(r[3]),
-                "created_at": r[4],
-                "entries": r[5],
-                "apps": app_access.list_for_admin(r[0]),
+                **u,
+                "email_verified": bool(u["email_verified"]),
+                "apps": app_access_service.list_for_admin(u["id"]),
             }
-            for r in rows
+            for u in users
         ]
     }
 
 
 @router.get("/stats")
-async def admin_stats(admin_id: int = Depends(require_admin)):
+async def admin_stats(
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+):
     """Admins: instance-wide stats."""
     del admin_id
-    from routa.web.app import BUILD_ID
     db_size = db.DB_PATH.stat().st_size if db.DB_PATH.exists() else 0
-    users = tenant._conn().execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    entries = tenant._conn().execute("SELECT COUNT(*) FROM work_led_entries").fetchone()[0]
-    currencies = len(currency.ALL)
     return {
-        "build_id": BUILD_ID,
+        "build_id": _build_id(),
         "db_path": str(db.DB_PATH),
         "db_size": db_size,
-        "users": users,
-        "entries": entries,
-        "currencies": currencies,
+        "users": user_service.count_users(),
+        "entries": user_service.count_entries(),
+        "currencies": len(currency.ALL),
     }
 
 
 @router.get("/health")
-async def admin_health(admin_id: int = Depends(require_admin)):
+async def admin_health(
+    admin_id: int = Depends(require_admin),
+    global_settings_service: GlobalSettingsService = Depends(get_global_settings_service),
+):
     """Admins: basic health checks."""
     del admin_id
     db_ok = False
     try:
-        with tenant._conn() as con:
-            con.execute("SELECT 1")
+        global_settings_service.get_all()
         db_ok = True
     except Exception:
         log.exception("admin health db check failed")
@@ -108,10 +136,13 @@ async def admin_health(admin_id: int = Depends(require_admin)):
 
 
 @router.get("/admins")
-async def admin_list(admin_id: int = Depends(require_admin)):
+async def admin_list(
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+):
     """Admins: list current admins."""
     del admin_id
-    return {"admins": tenant.list_admins()}
+    return {"admins": user_service.list_admins()}
 
 
 @router.get("/constants")
@@ -127,13 +158,20 @@ async def admin_constants_list(admin_id: int = Depends(require_admin)):
 
 
 @router.post("/constants")
-async def admin_constants_update(payload: dict, admin_id: int = Depends(require_admin)):
+async def admin_constants_update(
+    payload: dict,
+    admin_id: int = Depends(require_admin),
+    global_settings_service: GlobalSettingsService = Depends(get_global_settings_service),
+):
     """Admins: update one or more tunable constants."""
     del admin_id
     updates = payload.get("updates", {})
     for key, value in updates.items():
         if key not in constants.DEFAULTS:
-            return JSONResponse({"error": "error_unknown_constant"}, status_code=400)
+            return JSONResponse(
+                {"error": _t("error_unknown_constant").replace("{key}", key)},
+                status_code=400,
+            )
         default = constants.DEFAULTS[key]
         try:
             if isinstance(default, bool):
@@ -145,37 +183,51 @@ async def admin_constants_update(payload: dict, admin_id: int = Depends(require_
             elif isinstance(default, Decimal):
                 Decimal(value)
         except Exception:
-            return JSONResponse({"error": "error_invalid_value"}, status_code=400)
-        global_settings.set(key, str(value))
+            return JSONResponse(
+                {"error": _t("error_invalid_value").replace("{key}", key)},
+                status_code=400,
+            )
+        global_settings_service.set(key, str(value))
     return {"ok": True, "constants": constants.all_effective()}
 
 
 @router.post("/admins")
-async def admin_add(payload: dict, admin_id: int = Depends(require_admin)):
+async def admin_add(
+    payload: dict,
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+):
     """Admins: add a user as admin by login."""
     del admin_id
     login = (payload.get("login") or "").strip().lower()
-    u = tenant.get_user_by_login(login)
+    u = user_service.get_user_by_login(login)
     if not u:
-        return JSONResponse({"error": "error_user_not_found"}, status_code=404)
-    tenant.add_admin(u["id"])
+        return JSONResponse({"error": _t("error_user_not_found")}, status_code=404)
+    user_service.add_admin(u["id"])
     return {"ok": True, "id": u["id"], "login": u["login"]}
 
 
 @router.delete("/admins/{user_id}")
-async def admin_remove(user_id: int, admin_id: int = Depends(require_admin)):
+async def admin_remove(
+    user_id: int,
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+):
     """Admins: remove admin rights."""
     del admin_id
-    tenant.remove_admin(user_id)
+    user_service.remove_admin(user_id)
     return {"ok": True}
 
 
 @router.get("/config")
-async def admin_config(admin_id: int = Depends(require_admin)):
+async def admin_config(
+    admin_id: int = Depends(require_admin),
+    global_settings_service: GlobalSettingsService = Depends(get_global_settings_service),
+):
     """Admins: editable runtime config + env secrets (masked) + static constants."""
     del admin_id
-    from routa.web.app import COOKIE
-    s = config.settings()
+    runtime = global_settings_service.get_runtime()
+    s = settings()
 
     def _mask(v: str | None) -> str:
         v = v or ""
@@ -184,17 +236,11 @@ async def admin_config(admin_id: int = Depends(require_admin)):
         return v[:2] + "****" + v[-2:]
 
     return {
-        "runtime": {
-            "registration_mode": config.registration_mode(),
-            "registration_invite_code": config.registration_invite_code(),
-            "strict_password_policy": config.strict_password_policy(),
-            "default_currency": config.default_currency(),
-            "web_base_url": config.web_base_url(),
-        },
+        "runtime": runtime,
         "static": {
-            "OWNER_TENANT_ID": tenant.OWNER_TENANT_ID,
+            "OWNER_TENANT_ID": OWNER_TENANT_ID,
             "DEFAULT_CURRENCY": money.DEFAULT_CURRENCY,
-            "COOKIE_NAME": COOKIE,
+            "COOKIE_NAME": s.avalone_cookie_name,
             "registration_mode_env": s.registration_mode,
             "registration_invite_code_env": bool(s.registration_invite_code),
             "currencies_count": len(currency.ALL),
@@ -218,82 +264,99 @@ async def admin_config(admin_id: int = Depends(require_admin)):
 
 
 @router.post("/config")
-async def admin_config_update(payload: dict, admin_id: int = Depends(require_admin)):
+async def admin_config_update(
+    payload: dict,
+    admin_id: int = Depends(require_admin),
+    global_settings_service: GlobalSettingsService = Depends(get_global_settings_service),
+):
     """Admins: update runtime config keys stored in global_settings."""
     del admin_id
     allowed = {
-        "registration_mode", "registration_invite_code", "strict_password_policy",
-        "default_currency", "web_base_url",
+        "registration_mode",
+        "registration_invite_code",
+        "strict_password_policy",
+        "default_currency",
+        "web_base_url",
     }
     for key, value in payload.items():
         if key not in allowed:
             continue
         if key == "registration_mode" and value not in ("open", "invite", "closed"):
-            return JSONResponse({"error": "error_invalid_mode"}, status_code=400)
+            return JSONResponse({"error": _t("error_invalid_mode")}, status_code=400)
         if key == "default_currency" and value not in currency.ALL:
-            return JSONResponse({"error": "error_invalid_currency"}, status_code=400)
+            return JSONResponse({"error": _t("error_unknown_currency")}, status_code=400)
         if key == "strict_password_policy":
             value = "true" if str(value).strip().lower() in ("1", "true", "yes", "on") else "false"
-        global_settings.set(key, str(value))
-    return {
-        "ok": True,
-        "registration_mode": config.registration_mode(),
-        "registration_invite_code": config.registration_invite_code(),
-        "strict_password_policy": config.strict_password_policy(),
-        "default_currency": config.default_currency(),
-        "web_base_url": config.web_base_url(),
-    }
+        global_settings_service.set(key, str(value))
+    return {"ok": True, **global_settings_service.get_runtime()}
 
 
 @router.post("/users/{user_id}/reset-password")
-async def admin_reset_password(user_id: int, admin_id: int = Depends(require_admin)):
+async def admin_reset_password(
+    user_id: int,
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+):
     """Admins: generate a one-time password reset link for a user."""
     from datetime import datetime, timedelta, timezone
+
     if user_id == admin_id:
-        return JSONResponse({"error": "error_cannot_reset_self"}, status_code=400)
-    u = tenant.get_user(user_id)
+        return JSONResponse({"error": _t("error_cannot_reset_self")}, status_code=400)
+    u = user_service.get_user(user_id)
     if not u:
-        return JSONResponse({"error": "error_user_not_found"}, status_code=404)
+        return JSONResponse({"error": _t("error_user_not_found")}, status_code=404)
     token = security.new_token()
     expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(timespec="seconds")
-    tenant.set_reset_token(user_id, token, expires)
+    user_service.set_reset_token(user_id, token, expires)
     link = f"{config.web_base_url()}/reset?token={token}"
     return {"ok": True, "login": u["login"], "reset_link": link, "expires_min": 30}
 
 
 @router.delete("/users/{user_id}")
-async def admin_delete_user(user_id: int, admin_id: int = Depends(require_admin)):
+async def admin_delete_user(
+    user_id: int,
+    admin_id: int = Depends(require_admin),
+    user_service: TenantService = Depends(get_user_service),
+):
     """Admins: delete user and all their data."""
     if user_id == admin_id:
-        return JSONResponse({"error": "error_cannot_delete_self"}, status_code=400)
-    admins = tenant.list_admins()
+        return JSONResponse({"error": _t("error_cannot_delete_self")}, status_code=400)
+    admins = user_service.list_admins()
     if any(a["id"] == user_id for a in admins) and len(admins) <= 1:
-        return JSONResponse({"error": "error_last_admin"}, status_code=400)
-    u = tenant.get_user(user_id)
+        return JSONResponse({"error": _t("error_last_admin")}, status_code=400)
+    u = user_service.get_user(user_id)
     if not u:
-        return JSONResponse({"error": "error_user_not_found"}, status_code=404)
-    tenant.delete_user(user_id)
+        return JSONResponse({"error": _t("error_user_not_found")}, status_code=404)
+    user_service.delete_user(user_id)
     return {"ok": True}
 
 
 @router.get("/user-apps")
-async def admin_user_apps(user_id: int, admin_id: int = Depends(require_admin)):
+async def admin_user_apps(
+    user_id: int,
+    admin_id: int = Depends(require_admin),
+    app_access_service: AppAccessService = Depends(get_app_access_service),
+):
     """Admins: per-user app access state for the toggles."""
     del admin_id
-    return {"user_id": user_id, "apps": app_access.list_for_admin(user_id)}
+    return {"user_id": user_id, "apps": app_access_service.list_for_admin(user_id)}
 
 
 @router.post("/user-apps")
-async def admin_set_user_app(payload: dict, admin_id: int = Depends(require_admin)):
+async def admin_set_user_app(
+    payload: dict,
+    admin_id: int = Depends(require_admin),
+    app_access_service: AppAccessService = Depends(get_app_access_service),
+):
     """Admins: enable/disable a specific app for a user."""
     del admin_id
     user_id = payload.get("user_id")
     app_id = (payload.get("app_id") or "").strip()
     enabled = bool(payload.get("enabled"))
     if not isinstance(user_id, int) or not app_id:
-        return JSONResponse({"error": "error_user_app_required"}, status_code=400)
+        return JSONResponse({"error": _t("error_user_app_required")}, status_code=400)
     try:
-        app_access.set_access(user_id, app_id, enabled)
+        app_access_service.set_access(user_id, app_id, enabled)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return {"ok": True}
@@ -316,8 +379,10 @@ async def admin_logs(lines: int = 200, admin_id: int = Depends(require_admin)):
 async def admin_restart(admin_id: int = Depends(require_admin)):
     """Admins: ask the process to exit; launchd will restart it."""
     del admin_id
+
     async def _do_restart():
         await asyncio.sleep(1)
         os.kill(os.getpid(), signal.SIGTERM)
+
     asyncio.create_task(_do_restart())
     return {"ok": True, "message": "restarting"}

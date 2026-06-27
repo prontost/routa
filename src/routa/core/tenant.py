@@ -1,345 +1,163 @@
 """Мультиюзер: пользователи (тенанты) + текущий тенант запроса.
 
-Этап 1 (фундамент изоляции): у каждого пользователя свой tenant_id; ВСЕ
-денежные таблицы фильтруются по нему. Текущий тенант кладётся в contextvar на
-время запроса (middleware) — чтобы не протаскивать tenant_id через ~50 сигнатур
-и не забыть фильтр (забытый фильтр = чужие деньги на экране).
+Данные пользователей теперь живут в единой БД Avalone (`avalone_core.db`).
+Routa работает с таблицами `users` и `admins` через `UserRepository`;
+администраторы Work отмечены в `admins` с `module='work'`.
 
-users: id, login (уникальный), pwhash, email, created_at, email_verified.
-Пароли — PBKDF2-HMAC-SHA256 (stdlib hashlib, без внешних зависимостей).
-
-Существующие данные владельца переносятся под tenant_id=1 (см. set_tenant_id
-в миграции). Глоссарий (UI/валюты/уведомления) — ОБЩИЙ, без tenant_id.
+Все функции модуля оставлены для обратной совместимости и делегируют методам
+единого инстанса `TenantService`.
 """
 
-import hashlib
-import hmac
-import os
-import sqlite3
-from contextvars import ContextVar
-from datetime import datetime, timezone
+from __future__ import annotations
 
-from routa.core.db import DB_PATH
+from contextvars import ContextVar
+
+from avalone_core.database import Service
+from avalone_core import glossary_db as glossary
+from routa.core.user_repository import UserRepository
+from routa.core.db import DB_PATH  # noqa: F401  # backward-compatible re-export
 
 # текущий тенант запроса; 0 = не установлен (запрещаем доступ к данным)
 _current: ContextVar[int] = ContextVar("tenant_id", default=0)
 
-OWNER_TENANT_ID = 1   # владелец (его данные переносятся при миграции)
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    login          TEXT UNIQUE NOT NULL,
-    pwhash         TEXT NOT NULL,
-    email          TEXT DEFAULT '',
-    email_verified INTEGER DEFAULT 0,
-    verify_code    TEXT DEFAULT '',
-    verify_sent    TEXT DEFAULT '',
-    created_at     TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS admins (
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    module  TEXT NOT NULL DEFAULT 'work',
-    PRIMARY KEY (user_id, module)
-);
-"""
+OWNER_TENANT_ID = 1  # владелец (его данные переносятся при миграции)
 
 
-def _conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(DB_PATH)
-    con.executescript(_SCHEMA)
-    cols = {r[1] for r in con.execute("PRAGMA table_info(users)")}
-    if "email_verified" not in cols:
-        con.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0")
-    if "verify_code" not in cols:
-        con.execute("ALTER TABLE users ADD COLUMN verify_code TEXT DEFAULT ''")
-    if "verify_sent" not in cols:
-        con.execute("ALTER TABLE users ADD COLUMN verify_sent TEXT DEFAULT ''")
-    # одноразовый токен сброса пароля (по почте) + срок годности (ISO UTC)
-    if "reset_token" not in cols:
-        con.execute("ALTER TABLE users ADD COLUMN reset_token TEXT DEFAULT ''")
-    if "reset_expires" not in cols:
-        con.execute("ALTER TABLE users ADD COLUMN reset_expires TEXT DEFAULT ''")
-    return con
+class TenantService(Service):
+    """Tenant/user business logic and request-scoped tenant context."""
 
+    def __init__(self, repository: UserRepository | None = None) -> None:
+        self._repo = repository or UserRepository()
 
-# --- контекст текущего тенанта ---
-def set_current(tenant_id: int) -> None:
-    _current.set(tenant_id)
+    # --- контекст текущего тенанта ---
+    def set_current(self, tenant_id: int) -> None:
+        _current.set(tenant_id)
 
+    def current(self) -> int:
+        return _current.get()
 
-def current() -> int:
-    return _current.get()
+    def require_current(self) -> int:
+        t = _current.get()
+        if not t:
+            raise PermissionError(glossary.t("error_tenant_not_set", lang="ru"))
+        return t
 
-
-def require_current() -> int:
-    t = _current.get()
-    if not t:
-        raise PermissionError("error_tenant_missing")
-    return t
-
-
-# --- пароли (PBKDF2, stdlib) ---
-def hash_password(password: str) -> str:
-    salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
-    return f"pbkdf2$200000${salt.hex()}${dk.hex()}"
-
-
-def verify_password(password: str, stored: str) -> bool:
-    try:
-        algo, iters, salt_hex, dk_hex = stored.split("$")
-        if algo != "pbkdf2":
-            return False
-        dk = hashlib.pbkdf2_hmac("sha256", password.encode(),
-                                 bytes.fromhex(salt_hex), int(iters))
-        return hmac.compare_digest(dk.hex(), dk_hex)
-    except Exception:
-        return False
-
-
-# --- пользователи ---
-def create_user(login: str, password: str, email: str = "") -> int:
-    login = login.strip().lower()
-    if not login or not password:
-        raise ValueError("error_login_password_required")
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    with _conn() as con:
-        cur = con.execute(
-            "INSERT INTO users (login, pwhash, email, created_at) VALUES (?,?,?,?)",
-            (login, hash_password(password), email.strip().lower(), now))
-        return cur.lastrowid
-
-
-def get_by_login(login: str) -> dict | None:
-    with _conn() as con:
-        r = con.execute(
-            "SELECT id, login, pwhash, email, email_verified FROM users WHERE login=?",
-            (login.strip().lower(),)).fetchone()
-    if not r:
+    # --- аутентификация ---
+    def authenticate(self, login: str, password: str) -> int | None:
+        u = self._repo.get_by_login(login)
+        if u and self._repo.verify_password(password, u["pwhash"]):
+            return u["id"]
         return None
-    return {"id": r[0], "login": r[1], "pwhash": r[2], "email": r[3], "email_verified": r[4]}
+
+    def create_user(self, login: str, password: str, email: str = "") -> int:
+        return self._repo.create(login, password, email)
+
+    def login_taken(self, login: str) -> bool:
+        return self._repo.login_taken(login)
+
+    def count_users(self) -> int:
+        return self._repo.count_users()
+
+    def count_entries(self) -> int:
+        """Admin aggregate: total entries across all tenants."""
+        return self._repo.count_entries()
+
+    def all_ids(self) -> list[int]:
+        return self._repo.all_ids()
+
+    def list_users(self) -> list[dict]:
+        """Admin aggregate: all users with entry counts."""
+        return self._repo.list_users()
+
+    def get_user(self, tenant_id: int) -> dict | None:
+        return self._repo.get_user(tenant_id)
+
+    def get_user_by_login(self, login: str) -> dict | None:
+        return self._repo.get_user_by_login(login)
+
+    def accounts_for_email(self, email: str) -> list[dict]:
+        return self._repo.accounts_for_email(email)
+
+    def change_password(self, tenant_id: int, old_pw: str, new_pw: str) -> bool:
+        return self._repo.change_password(tenant_id, old_pw, new_pw)
+
+    def set_password(self, tenant_id: int, new_pw: str) -> None:
+        self._repo.set_password(tenant_id, new_pw)
+
+    def set_email(self, tenant_id: int, email: str) -> None:
+        self._repo.set_email(tenant_id, email)
+
+    def set_verify_code(self, tenant_id: int, code: str) -> None:
+        self._repo.set_verify_code(tenant_id, code)
+
+    def check_verify_code(self, tenant_id: int, code: str) -> bool:
+        return self._repo.check_verify_code(tenant_id, code)
+
+    def set_reset_token(self, tenant_id: int, token: str, expires_iso: str) -> None:
+        self._repo.set_reset_token(tenant_id, token, expires_iso)
+
+    def consume_reset_token(self, token: str) -> int | None:
+        return self._repo.consume_reset_token(token)
+
+    def delete_user(self, tenant_id: int) -> None:
+        self._repo.delete_user(tenant_id)
+
+    def ensure_owner(self, login: str, password: str) -> int:
+        return self._repo.ensure_owner(login, password)
+
+    # --- администраторы ---
+    def ensure_admin_table(self) -> None:
+        self._repo.ensure_admin_table()
+
+    def ensure_admin(self) -> None:
+        """Backward-compatible alias for ensure_admin_table."""
+        self.ensure_admin_table()
+
+    def is_admin(self, user_id: int | None) -> bool:
+        return self._repo.is_admin(user_id)
+
+    def list_admins(self) -> list[dict]:
+        return self._repo.list_admins()
+
+    def add_admin(self, user_id: int) -> None:
+        self._repo.add_admin(user_id)
+
+    def remove_admin(self, user_id: int) -> None:
+        self._repo.remove_admin(user_id)
 
 
-def authenticate(login: str, password: str) -> int | None:
-    """Вернуть tenant_id при верном пароле, иначе None."""
-    u = get_by_login(login)
-    if u and verify_password(password, u["pwhash"]):
-        return u["id"]
-    return None
+# --- backward-compatible module-level API ---
+_default_service = TenantService()
+_default_repo = _default_service._repo
 
-
-def login_taken(login: str) -> bool:
-    return get_by_login(login) is not None
-
-
-def count_users() -> int:
-    with _conn() as con:
-        return con.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-
-
-def all_ids() -> list[int]:
-    """Все tenant_id — для фоновых задач (планировщик), идущих по каждому юзеру."""
-    with _conn() as con:
-        return [r[0] for r in con.execute("SELECT id FROM users ORDER BY id")]
-
-
-# --- смена пароля ---
-def change_password(tenant_id: int, old_pw: str, new_pw: str) -> bool:
-    """Сменить пароль при верном старом. False если старый неверен."""
-    with _conn() as con:
-        r = con.execute("SELECT pwhash FROM users WHERE id=?", (tenant_id,)).fetchone()
-        if not r or not verify_password(old_pw, r[0]):
-            return False
-        con.execute("UPDATE users SET pwhash=? WHERE id=?",
-                    (hash_password(new_pw), tenant_id))
-    return True
-
-
-# --- подтверждение почты ---
-def set_verify_code(tenant_id: int, code: str) -> None:
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    with _conn() as con:
-        con.execute("UPDATE users SET verify_code=?, verify_sent=? WHERE id=?",
-                    (code, now, tenant_id))
-
-
-_VERIFY_TTL_SECONDS = 30 * 60   # код подтверждения почты живёт 30 минут
-
-
-def check_verify_code(tenant_id: int, code: str) -> bool:
-    """Сверить код; при успехе помечает email_verified=1 и стирает код.
-    Код действителен 30 минут с момента отправки (verify_sent)."""
-    code = (code or "").strip()
-    if not code:
-        return False
-    now = datetime.now(timezone.utc)
-    with _conn() as con:
-        r = con.execute("SELECT verify_code, verify_sent FROM users WHERE id=?",
-                        (tenant_id,)).fetchone()
-        if not r or not r[0] or not hmac.compare_digest(r[0], code):
-            return False
-        sent = r[1]
-        if not sent:
-            return False
-        try:
-            sent_dt = datetime.fromisoformat(sent)
-        except Exception:
-            return False
-        if (now - sent_dt).total_seconds() > _VERIFY_TTL_SECONDS:
-            return False
-        con.execute("UPDATE users SET email_verified=1, verify_code='', verify_sent='' WHERE id=?",
-                    (tenant_id,))
-    return True
-
-
-def get_user(tenant_id: int) -> dict | None:
-    with _conn() as con:
-        r = con.execute(
-            "SELECT id, login, email, email_verified FROM users WHERE id=?",
-            (tenant_id,)).fetchone()
-    if not r:
-        return None
-    return {"id": r[0], "login": r[1], "email": r[2], "email_verified": r[3]}
-
-
-def accounts_for_email(email: str) -> list[dict]:
-    """Все аккаунты с этой почтой (для восстановления логина / сброса пароля).
-    Почта НЕ уникальна — возвращаем список. Пустой email → пусто."""
-    email = (email or "").strip().lower()
-    if not email:
-        return []
-    with _conn() as con:
-        rows = con.execute(
-            "SELECT id, login, email FROM users WHERE email=? ORDER BY id",
-            (email,)).fetchall()
-    return [{"id": r[0], "login": r[1], "email": r[2]} for r in rows]
-
-
-def set_reset_token(tenant_id: int, token: str, expires_iso: str) -> None:
-    with _conn() as con:
-        con.execute("UPDATE users SET reset_token=?, reset_expires=? WHERE id=?",
-                    (token, expires_iso, tenant_id))
-
-
-def consume_reset_token(token: str) -> int | None:
-    """Проверить одноразовый токен сброса: вернуть tenant_id если валиден и не
-    истёк, при этом СРАЗУ его погасить (одноразовость). Иначе None."""
-    token = (token or "").strip()
-    if not token:
-        return None
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    with _conn() as con:
-        r = con.execute(
-            "SELECT id, reset_expires FROM users WHERE reset_token=?", (token,)).fetchone()
-        if not r or not r[1] or r[1] < now:
-            return None
-        con.execute("UPDATE users SET reset_token='', reset_expires='' WHERE id=?", (r[0],))
-    return r[0]
-
-
-def set_password(tenant_id: int, new_pw: str) -> None:
-    """Принудительно задать пароль (после валидного токена сброса; без старого)."""
-    with _conn() as con:
-        con.execute("UPDATE users SET pwhash=? WHERE id=?",
-                    (hash_password(new_pw), tenant_id))
-
-
-def delete_user(tenant_id: int) -> None:
-    """Полностью удалить пользователя и все его данные."""
-    with _conn() as con:
-        # tenant-specific tables
-        for tbl in (
-            "work_led_accounts", "work_led_entries", "work_led_lines", "work_led_seq",
-            "work_money_accounts", "work_user_settings", "work_catalog_i18n",
-            "work_entry_meta", "work_slept_entries", "work_lexicon",
-            "work_user_apps", "work_notifications",
-        ):
-            try:
-                con.execute(f"DELETE FROM {tbl} WHERE tenant=?", (tenant_id,))
-            except sqlite3.OperationalError:
-                pass  # таблица может ещё не существовать
-        con.execute("DELETE FROM admins WHERE user_id=? AND module='work'", (tenant_id,))
-        con.execute("DELETE FROM users WHERE id=?", (tenant_id,))
-
-
-def set_email(tenant_id: int, email: str) -> None:
-    with _conn() as con:
-        con.execute("UPDATE users SET email=?, email_verified=0 WHERE id=?",
-                    (email.strip().lower(), tenant_id))
-
-
-def ensure_owner(login: str, password: str) -> int:
-    """Идемпотентно создать владельца с фиксированным id=1 (для миграции
-    существующих данных под него). Возвращает OWNER_TENANT_ID."""
-    with _conn() as con:
-        exists = con.execute("SELECT id FROM users WHERE id=?", (OWNER_TENANT_ID,)).fetchone()
-        if exists:
-            return OWNER_TENANT_ID
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        con.execute(
-            "INSERT INTO users (id, login, pwhash, email, email_verified, created_at) "
-            "VALUES (?,?,?,?,1,?)",
-            (OWNER_TENANT_ID, login.strip().lower(), hash_password(password), "", now))
-    return OWNER_TENANT_ID
-
-
-# --- администраторы инстанса (отдельно от OWNER_TENANT_ID) ---
-def ensure_admin_table() -> None:
-    """Создать таблицу admins, если её ещё нет (shared Avalone table)."""
-    with _conn() as con:
-        con.execute(
-            "CREATE TABLE IF NOT EXISTS admins ("
-            "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
-            "module TEXT NOT NULL DEFAULT 'work', "
-            "PRIMARY KEY (user_id, module))"
-        )
-
-
-def is_admin(user_id: int | None) -> bool:
-    """Является ли пользователь администратором Work."""
-    if not user_id:
-        return False
-    with _conn() as con:
-        r = con.execute("SELECT 1 FROM admins WHERE user_id=? AND module='work'", (user_id,)).fetchone()
-    return bool(r)
-
-
-def list_admins() -> list[dict]:
-    """Список администраторов Work с логинами."""
-    with _conn() as con:
-        rows = con.execute(
-            "SELECT u.id, u.login, u.email, u.created_at FROM admins a "
-            "JOIN users u ON u.id=a.user_id WHERE a.module='work' ORDER BY u.login"
-        ).fetchall()
-    return [{"id": r[0], "login": r[1], "email": r[2], "created_at": r[3]} for r in rows]
-
-
-def add_admin(user_id: int) -> None:
-    """Назначить пользователя администратором Work."""
-    ensure_admin_table()
-    with _conn() as con:
-        con.execute(
-            "INSERT OR IGNORE INTO admins (user_id, module) VALUES (?, 'work')", (user_id,)
-        )
-
-
-def remove_admin(user_id: int) -> None:
-    """Снять права администратора Work."""
-    with _conn() as con:
-        con.execute("DELETE FROM admins WHERE user_id=? AND module='work'", (user_id,))
-
-
-def get_user_by_login(login: str) -> dict | None:
-    """Найти пользователя по логину (без учёта регистра)."""
-    login = login.strip().lower()
-    with _conn() as con:
-        r = con.execute(
-            "SELECT id, login, email, email_verified, created_at FROM users WHERE login=?",
-            (login,)
-        ).fetchone()
-    if not r:
-        return None
-    return {"id": r[0], "login": r[1], "email": r[2], "email_verified": r[3], "created_at": r[4]}
+set_current = _default_service.set_current
+current = _default_service.current
+require_current = _default_service.require_current
+authenticate = _default_service.authenticate
+create_user = _default_service.create_user
+login_taken = _default_service.login_taken
+count_users = _default_service.count_users
+count_entries = _default_service.count_entries
+all_ids = _default_service.all_ids
+get_user = _default_service.get_user
+get_user_by_login = _default_service.get_user_by_login
+accounts_for_email = _default_service.accounts_for_email
+change_password = _default_service.change_password
+set_password = _default_service.set_password
+set_email = _default_service.set_email
+set_verify_code = _default_service.set_verify_code
+check_verify_code = _default_service.check_verify_code
+set_reset_token = _default_service.set_reset_token
+consume_reset_token = _default_service.consume_reset_token
+delete_user = _default_service.delete_user
+ensure_owner = _default_service.ensure_owner
+ensure_admin_table = _default_service.ensure_admin_table
+ensure_admin = _default_service.ensure_admin
+is_admin = _default_service.is_admin
+list_admins = _default_service.list_admins
+add_admin = _default_service.add_admin
+remove_admin = _default_service.remove_admin
+hash_password = _default_repo.hash_password
+verify_password = _default_repo.verify_password
+get_by_login = _default_repo.get_by_login
+_conn = _default_repo._conn
