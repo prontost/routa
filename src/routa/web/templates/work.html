@@ -1,11 +1,8 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0a0c10">
-<title>Работа — Avalone</title>
+{% extends "avalone_base.html" %}
+
+{% block title %}Работа — Avalone{% endblock %}
+
+{% block extra_head %}
 <script>
 const I18N = {
   ru: {
@@ -137,23 +134,9 @@ function applyLang(lang){
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
-</head>
-<body>
-{% from 'shell.html' import avalone_shell %}
-{% call avalone_shell(
-    current_app='work',
-    user=user,
-    branches=registry.for_shell('ru'),
-    app_nav=[
-        {'label':'Работа', 'entries':[
-            {'id':'trips','label':'Поездки','icon':'🚐','url':'/#trips','active':True},
-            {'id':'stats','label':'Статистика','icon':'📊','url':'/#stats'},
-            {'id':'notifications','label':'Уведомления','icon':'🔔','url':'/#notifications'},
-            {'id':'settings','label':'Настройки','icon':'⚙️','url':'/#settings'}
-        ]}
-    ]
-) %}
+{% endblock %}
 
+{% block content %}
 <div id="page-trips" class="page active">
   <div class="avalone-page-header">
     <h1 class="avalone-page-title" data-i="page_trips">Поездки</h1>
@@ -217,8 +200,6 @@ function applyLang(lang){
     </label>
   </div>
 </div>
-
-{% endcall %}
 
 <!-- Toast -->
 <div id="toast" class="toast"></div>
@@ -536,5 +517,4 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   route();
 });
 </script>
-</body>
-</html>
+{% endblock %}

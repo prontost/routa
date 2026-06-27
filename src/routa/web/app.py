@@ -18,6 +18,8 @@ from itsdangerous import URLSafeSerializer
 
 from avalone_core import glossary
 from avalone_core.registry import AvaloneRegistry
+from avalone_core.ui import Shell, build_id as ui_build_id
+import avalone_core.ui
 from routa.core import config, constants, db, external_auth, rides, tenant
 from routa.core.config import settings
 from routa.web.api import router as api_router
@@ -49,11 +51,15 @@ app = FastAPI(title="Routa")
 BASE = Path(__file__).parent
 _templates_dir = BASE / "templates"
 _static_dir = BASE / "static"
-templates = Jinja2Templates(directory=str(_templates_dir))
+_ui_dir = Path(avalone_core.ui.__file__).parent
+_ui_templates_dir = _ui_dir / "templates"
+_ui_static_dir = _ui_dir / "static"
+templates = Jinja2Templates(directory=[str(_templates_dir), str(_ui_templates_dir)])
 templates.env.globals["glossary"] = glossary.GLOSSARY
 templates.env.globals["t"] = glossary.t
 templates.env.globals["i18n_js"] = glossary.i18n_js
 templates.env.globals["registry"] = AvaloneRegistry
+app.mount("/static/ui", StaticFiles(directory=str(_ui_static_dir)), name="ui_static")
 app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 _sso_signer = URLSafeSerializer(
     settings().avalone_fernet_key or settings().fernet_key,
@@ -74,6 +80,16 @@ def _build_id() -> str:
             if f.is_file() and not f.name.startswith("."):
                 try:
                     h.update(f"{f.relative_to(root)}:".encode())
+                    h.update(f.read_bytes())
+                except Exception:
+                    pass
+    # shared UI
+    for sub in ("templates", "static"):
+        p = _ui_dir / sub
+        for f in sorted(p.rglob("*")):
+            if f.is_file() and not f.name.startswith("."):
+                try:
+                    h.update(f"ui/{sub}/{f.name}:".encode())
                     h.update(f.read_bytes())
                 except Exception:
                     pass
@@ -125,10 +141,38 @@ def _no_cache(resp):
     return resp
 
 
+def _work_app_nav(active_id: str = "trips"):
+    entries = [
+        {"id": "trips", "label": "Поездки", "icon": "🚐", "url": "/#trips"},
+        {"id": "stats", "label": "Статистика", "icon": "📊", "url": "/#stats"},
+        {"id": "notifications", "label": "Уведомления", "icon": "🔔", "url": "/#notifications"},
+        {"id": "settings", "label": "Настройки", "icon": "⚙️", "url": "/#settings"},
+    ]
+    for e in entries:
+        e["active"] = e["id"] == active_id
+    return [{"label": "Работа", "entries": entries}]
+
+
+def _shell_context_for(request: Request, user, current_app: str = "work", active_id: str = "trips"):
+    branches = AvaloneRegistry.for_shell("ru")
+    shell = Shell(
+        current_app=current_app,
+        user=user,
+        branches=branches,
+        app_nav=_work_app_nav(active_id),
+    )
+    return {
+        "build_id": BUILD_ID,
+        "user": user,
+        "shell_html": shell.render(templates.env, request),
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 async def app_page(request: Request):
     user = tenant.get_user(tenant.require_current()) if tenant.current() else None
-    return _no_cache(templates.TemplateResponse(request, "work.html", {"user": user, "build_id": BUILD_ID}))
+    ctx = _shell_context_for(request, user, current_app="work", active_id="trips")
+    return _no_cache(templates.TemplateResponse(request, "work.html", ctx))
 
 
 @app.get("/join/{invite_code}")
