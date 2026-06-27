@@ -16,11 +16,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
-from avalone_core import glossary
+from avalone_core import glossary_db as glossary
 from avalone_core.registry import AvaloneRegistry
 from avalone_core.ui import Shell, build_id as ui_build_id
 import avalone_core.ui
-from routa.core import config, constants, db, external_auth, rides, tenant
+from routa.core import config, constants, db, external_auth, glossary_seed, rides, tenant
 from routa.core.config import settings
 from routa.web.api import router as api_router
 
@@ -55,7 +55,6 @@ _ui_dir = Path(avalone_core.ui.__file__).parent
 _ui_templates_dir = _ui_dir / "templates"
 _ui_static_dir = _ui_dir / "static"
 templates = Jinja2Templates(directory=[str(_templates_dir), str(_ui_templates_dir)])
-templates.env.globals["glossary"] = glossary.GLOSSARY
 templates.env.globals["t"] = glossary.t
 templates.env.globals["i18n_js"] = glossary.i18n_js
 templates.env.globals["registry"] = AvaloneRegistry
@@ -118,7 +117,7 @@ async def auth_gate(request: Request, call_next):
     tenant.set_current(tid)
     if path not in open_paths and not path.startswith("/static/") and not tid:
         if path.startswith("/api"):
-            return JSONResponse({"error": "unauthorized"}, status_code=401)
+            return JSONResponse({"error": "error_unauthorized"}, status_code=401)
         return RedirectResponse(_avalone_login_url(request), status_code=303)
     return await call_next(request)
 
@@ -141,16 +140,13 @@ def _no_cache(resp):
     return resp
 
 
-def _work_app_nav(active_id: str = "trips"):
-    entries = [
-        {"id": "trips", "label": "Поездки", "icon": "🚐", "url": "/#trips"},
-        {"id": "stats", "label": "Статистика", "icon": "📊", "url": "/#stats"},
-        {"id": "notifications", "label": "Уведомления", "icon": "🔔", "url": "/#notifications"},
-        {"id": "settings", "label": "Настройки", "icon": "⚙️", "url": "/#settings"},
-    ]
+def _work_app_nav(active_id: str = "trips", lang: str = "ru"):
+    entries = AvaloneRegistry.app_nav("work", lang)
     for e in entries:
+        e["id"] = e["href"].lstrip("/#")
+        e["url"] = e.pop("href")
         e["active"] = e["id"] == active_id
-    return [{"label": "Работа", "entries": entries}]
+    return [{"label": glossary.t("app_work", lang), "entries": entries}]
 
 
 def _shell_context_for(request: Request, user, current_app: str = "work", active_id: str = "trips"):
@@ -180,17 +176,17 @@ async def join_by_invite(request: Request, invite_code: str):
     try:
         trip = rides.get_trip_by_code(invite_code)
         if not trip:
-            return JSONResponse({"error": "invalid invite code"}, status_code=404)
+            return JSONResponse({"error": "error_invalid_invite_code"}, status_code=404)
         rides.join_trip_by_code(invite_code)
-    except ValueError as e:
-        return JSONResponse({"error": str(e)}, status_code=404)
+    except ValueError:
+        return JSONResponse({"error": "error_invalid_invite_code"}, status_code=404)
     return RedirectResponse(f"/#trip-{trip['id']}", status_code=303)
 
 
 @app.get("/manifest.json")
 async def manifest():
     return _no_cache(JSONResponse({
-        "name": "Работа — Avalone", "short_name": "Работа",
+        "name": glossary.t("manifest_name_work"), "short_name": glossary.t("manifest_short_name_work"),
         "start_url": "/", "display": "standalone",
         "background_color": "#0a0c10", "theme_color": "#0a0c10",
         "icons": [
@@ -273,13 +269,13 @@ async def _ensure_catalog():
         try:
             n = await catalog.ensure_user_catalog()
             if n:
-                logging.getLogger(__name__).info("ensure_user_catalog tenant=%s: создано %d категорий", tid, n)
+                logging.getLogger(__name__).info("ensure_user_catalog tenant=%s: created %d categories", tid, n)
         except Exception:
             logging.getLogger(__name__).exception("ensure_user_catalog tenant=%s", tid)
         try:
             m = await money.ensure_money_seed()
             if m:
-                logging.getLogger(__name__).info("ensure_money_seed tenant=%s: засеяно %d денежных счетов", tid, m)
+                logging.getLogger(__name__).info("ensure_money_seed tenant=%s: seeded %d money accounts", tid, m)
         except Exception:
             logging.getLogger(__name__).exception("ensure_money_seed tenant=%s", tid)
     # этапы B/A глоссария: доменные строки — в единый глоссарий
@@ -288,6 +284,7 @@ async def _ensure_catalog():
         from routa.core import currency
         currency.seed_glossary()
         catalog.seed_glossary()
+        glossary_seed.seed()
     except Exception:
         logging.getLogger(__name__).exception("glossary domain seed")
     # Гарантируем наличие хотя бы одного администратора Work.

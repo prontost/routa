@@ -6,54 +6,37 @@ role: need / want / goal."""
 
 import sqlite3
 
+from routa.core import glossary
 from routa.core.db import DB_PATH
 
-# canonical EN account_name -> {root, role, ru, en, ko}
-# role: need | want | goal (used by analytics and tips)
+# canonical EN account_name -> {root, role}. Display text lives in the unified
+# glossary under cat_* keys (kind='category'); see canon_key() and seed_glossary().
 CANON: dict[str, dict] = {
-    # --- NEEDS (обязательные траты) ---
-    "Housing":          {"root": "Expense", "role": "need",
-                         "ru": "Жильё", "en": "Housing", "ko": "주거"},
-    "Food":             {"root": "Expense", "role": "need",
-                         "ru": "Продукты", "en": "Food", "ko": "식료품"},
-    "Transport":        {"root": "Expense", "role": "need",
-                         "ru": "Транспорт", "en": "Transport", "ko": "교통"},
-    "Health & wellness":{"root": "Expense", "role": "need",
-                         "ru": "Здоровье и уход", "en": "Health & wellness", "ko": "건강 및 관리"},
-    "Family & kids":    {"root": "Expense", "role": "need",
-                         "ru": "Семья и дети", "en": "Family & kids", "ko": "가족 및 아이"},
+    # --- NEEDS ---
+    "Housing": {"root": "Expense", "role": "need"},
+    "Food": {"root": "Expense", "role": "need"},
+    "Transport": {"root": "Expense", "role": "need"},
+    "Health & wellness": {"root": "Expense", "role": "need"},
+    "Family & kids": {"root": "Expense", "role": "need"},
 
-    # --- WANTS (лайфстайл, можно сократить) ---
-    "Eating out":       {"root": "Expense", "role": "want",
-                         "ru": "Кафе и рестораны", "en": "Eating out", "ko": "외식"},
-    "Shopping & stuff": {"root": "Expense", "role": "want",
-                         "ru": "Покупки и вещи", "en": "Shopping & stuff", "ko": "쇼핑 및 물건"},
-    "Fun & subscriptions":{"root": "Expense", "role": "want",
-                         "ru": "Развлечения и подписки", "en": "Fun & subscriptions", "ko": "여가 및 구독"},
-    "Travel":           {"root": "Expense", "role": "want",
-                         "ru": "Путешествия", "en": "Travel", "ko": "여행"},
-    "Other expense":    {"root": "Expense", "role": "want",
-                         "ru": "Прочее", "en": "Other", "ko": "기타"},
-    "Uncategorized":    {"root": "Expense", "role": "want",
-                         "ru": "Укажу позже", "en": "Set later", "ko": "나중에 지정"},
+    # --- WANTS ---
+    "Eating out": {"root": "Expense", "role": "want"},
+    "Shopping & stuff": {"root": "Expense", "role": "want"},
+    "Fun & subscriptions": {"root": "Expense", "role": "want"},
+    "Travel": {"root": "Expense", "role": "want"},
+    "Other expense": {"root": "Expense", "role": "want"},
+    "Uncategorized": {"root": "Expense", "role": "want"},
 
-    # --- GOALS (финансовое будущее) ---
-    "Savings & investments":{"root": "Expense", "role": "goal",
-                         "ru": "Сбережения и инвестиции", "en": "Savings & investments", "ko": "저축 및 투자"},
-    "Debt repayment":   {"root": "Expense", "role": "goal",
-                         "ru": "Погашение долгов", "en": "Debt repayment", "ko": "빚 상환"},
-    "Education & growth":{"root": "Expense", "role": "goal",
-                         "ru": "Образование и рост", "en": "Education & growth", "ko": "교육 및 성장"},
+    # --- GOALS ---
+    "Savings & investments": {"root": "Expense", "role": "goal"},
+    "Debt repayment": {"root": "Expense", "role": "goal"},
+    "Education & growth": {"root": "Expense", "role": "goal"},
 
     # --- INCOME ---
-    "Salary income":    {"root": "Income", "role": "income",
-                         "ru": "Зарплата", "en": "Salary", "ko": "급여"},
-    "Side income":      {"root": "Income", "role": "income",
-                         "ru": "Подработка", "en": "Side income", "ko": "부수입"},
-    "Passive income":   {"root": "Income", "role": "income",
-                         "ru": "Пассивный доход", "en": "Passive income", "ko": "패시브 소득"},
-    "Other income":     {"root": "Income", "role": "income",
-                         "ru": "Прочий доход", "en": "Other income", "ko": "기타 수입"},
+    "Salary income": {"root": "Income", "role": "income"},
+    "Side income": {"root": "Income", "role": "income"},
+    "Passive income": {"root": "Income", "role": "income"},
+    "Other income": {"root": "Income", "role": "income"},
 }
 
 # Мультиюзер: переводы категорий у каждого тенанта свои. PK (tenant, account).
@@ -104,11 +87,10 @@ def _user_labels() -> dict[str, dict]:
 
 
 def label(account: str, account_name: str, lang: str = "ru") -> str:
-    """Localized label for an account. Priority: user table -> canon -> glossary."""
+    """Localized label for an account. Priority: user table -> glossary -> canonical English name."""
     users = _user_labels()
     if account in users and users[account].get(lang):
         return users[account][lang]
-    from routa.core import glossary
     if account.startswith("cat_"):
         g = glossary.get(account, lang)
         if g != account:
@@ -119,8 +101,6 @@ def label(account: str, account_name: str, lang: str = "ru") -> str:
         g = glossary.get(key, lang)
         if g != key:
             return g
-        if CANON[base].get(lang):
-            return CANON[base][lang]
     return account_name
 
 
@@ -138,11 +118,13 @@ def role(account_name: str) -> str:
 
 
 def seed_glossary() -> int:
-    """Засеять канонические категории/доходы в единый глоссарий (kind='category')."""
-    from routa.core import glossary
+    """Засеять канонические категории/доходы в единый глоссарий (kind='category').
+
+    Translations are taken from the unified glossary itself; this function only
+    ensures the canonical cat_* keys are present with their metadata.
+    """
     rows = []
     for name, meta in CANON.items():
-        is_income = meta.get("root") == "Income"
         role = meta.get("role", "")
         role_desc = {
             "need": "a basic need (must-have spending)",
@@ -150,11 +132,14 @@ def seed_glossary() -> int:
             "goal": "a financial goal (savings, debt, self-investment)",
             "income": "an income source",
         }.get(role, "a personal finance category")
+        key = canon_key(name)
         desc = (f"Name of {role_desc} in a personal finance app. "
-                f"Canonical English term: '{meta.get('en', name)}'. "
+                f"Canonical English term: '{name}'. "
                 f"Translate as the natural everyday word a person uses for this.")
-        rows.append({"key": canon_key(name), "ru": meta.get("ru", ""),
-                     "en": meta.get("en", ""), "ko": meta.get("ko", ""),
+        rows.append({"key": key,
+                     "ru": glossary.t(key, "ru"),
+                     "en": glossary.t(key, "en"),
+                     "ko": glossary.t(key, "ko"),
                      "kind": "category", "desc": desc})
     return glossary.upsert_many(rows)
 
@@ -201,8 +186,9 @@ async def ensure_user_catalog() -> int:
                 sqlledger.create_account_id(full, key, meta["root"])
                 created += 1
             except Exception:
-                logging.getLogger(__name__).warning("ensure_user_catalog: не создать %s", key)
+                logging.getLogger(__name__).warning("ensure_user_catalog: could not create %s", key)
                 continue
         if full not in labelled:
-            set_labels(full, meta["ru"], meta["en"], meta["ko"])
+            cat_key = canon_key(key)
+            set_labels(full, glossary.t(cat_key, "ru"), glossary.t(cat_key, "en"), glossary.t(cat_key, "ko"))
     return created

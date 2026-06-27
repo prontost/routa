@@ -1,86 +1,16 @@
 {% extends "avalone_base.html" %}
 
-{% block title %}Работа — Avalone{% endblock %}
+{% block title %}{{ t('manifest_name_work') }}{% endblock %}
 
 {% block extra_head %}
 <script>
-const I18N = {
-  ru: {
-    app_work:'Работа',
-    page_trips:'Поездки', page_stats:'Статистика', page_notifications:'Уведомления', page_settings:'Настройки',
-    create_trip:'Создать поездку', save:'Сохранить', cancel:'Отмена', invite:'Пригласить', copy:'Копировать',
-    open:'Открыть', edit:'Редактировать', close:'Закрыть', reopen:'Открыть', delete:'Удалить',
-    filter_all:'Все', filter_upcoming:'Предстоящие', filter_past:'Прошедшие', filter_mine:'Мои',
-    period_all:'Всё время', period_year:'Год', period_month:'Месяц', period_week:'Неделя',
-    export_csv:'Скачать CSV', mark_read:'Отметить все прочитанными',
-    profile:'Профиль', profile_hint:'Профиль редактируется на портале Avalone.', open_profile:'Открыть профиль',
-    notify_invites:'Email о приглашениях', notify_roles:'Email об изменении роли', notify_reminders:'Напоминания о поездках',
-    direction:'Направление', to_work:'На работу', from_work:'С работы',
-    date:'Дата', time:'Время', comment:'Комментарий',
-    members:'Участники', driver:'Водитель', passenger:'Пассажир', not_going:'Не еду', unknown:'Не определился',
-    trip_open:'Открыта', trip_closed:'Закрыта', trip_cancelled:'Отменена',
-    empty_trips:'Пока нет поездок', empty_trips_hint:'Создайте первую поездку, чтобы начать',
-    loading:'Загрузка...', error_load:'Не удалось загрузить поездки', not_found:'Поездка не найдена',
-    invite_title:'Пригласить', invite_hint:'Отправьте ссылку — человек сможет присоединиться после входа в Avalone.',
-    copied:'Ссылка скопирована', deleted_confirm:'Удалить поездку?', enter_date:'Укажите дату и время',
-    updated:'Поездка обновлена', created:'Поездка создана',
-    stat_total:'Всего поездок', stat_driver:'Водителем', stat_passenger:'Пассажиром',
-    edit_trip:'Редактировать поездку', organizer:'Организатор', seats:'мест', error_load_stats:'Не удалось загрузить статистику',
-    activity_by_day:'Активность по дням', member:'Участник'
-  },
-  en: {
-    app_work:'Work',
-    page_trips:'Trips', page_stats:'Statistics', page_notifications:'Notifications', page_settings:'Settings',
-    create_trip:'Create trip', save:'Save', cancel:'Cancel', invite:'Invite', copy:'Copy',
-    open:'Open', edit:'Edit', close:'Close', reopen:'Reopen', delete:'Delete',
-    filter_all:'All', filter_upcoming:'Upcoming', filter_past:'Past', filter_mine:'Mine',
-    period_all:'All time', period_year:'Year', period_month:'Month', period_week:'Week',
-    export_csv:'Download CSV', mark_read:'Mark all read',
-    profile:'Profile', profile_hint:'Profile is managed on the Avalone portal.', open_profile:'Open profile',
-    notify_invites:'Email about invites', notify_roles:'Email about role changes', notify_reminders:'Trip reminders',
-    direction:'Direction', to_work:'To work', from_work:'From work',
-    date:'Date', time:'Time', comment:'Comment',
-    members:'Members', driver:'Driver', passenger:'Passenger', not_going:'Not going', unknown:'Undecided',
-    trip_open:'Open', trip_closed:'Closed', trip_cancelled:'Cancelled',
-    empty_trips:'No trips yet', empty_trips_hint:'Create the first trip to get started',
-    loading:'Loading...', error_load:'Could not load trips', not_found:'Trip not found',
-    invite_title:'Invite', invite_hint:'Send the link — the person can join after signing in to Avalone.',
-    copied:'Link copied', deleted_confirm:'Delete trip?', enter_date:'Please enter date and time',
-    updated:'Trip updated', created:'Trip created',
-    stat_total:'Total trips', stat_driver:'As driver', stat_passenger:'As passenger',
-    edit_trip:'Edit trip', organizer:'Organizer', seats:'seats', error_load_stats:'Could not load statistics',
-    activity_by_day:'Activity by day', member:'Member'
-  },
-  ko: {
-    app_work:'업무',
-    page_trips:'출퇴근', page_stats:'통계', page_notifications:'알림', page_settings:'설정',
-    create_trip:'출퇴근 만들기', save:'저장', cancel:'취소', invite:'초대', copy:'복사',
-    open:'열기', edit:'편집', close:'닫기', reopen:'다시 열기', delete:'삭제',
-    filter_all:'전체', filter_upcoming:'예정', filter_past:'지난', filter_mine:'내 것',
-    period_all:'전체 기간', period_year:'년', period_month:'월', period_week:'주',
-    export_csv:'CSV 다운로드', mark_read:'모두 읽음 표시',
-    profile:'프로필', profile_hint:'프로필은 Avalone 포털에서 관리됩니다.', open_profile:'프로필 열기',
-    notify_invites:'초대 이메일', notify_roles:'역할 변경 이메일', notify_reminders:'출퇴근 알림',
-    direction:'방향', to_work:'출근', from_work:'퇴근',
-    date:'날짜', time:'시간', comment:'코멘트',
-    members:'참석자', driver:'운전자', passenger:'동승자', not_going:'미참석', unknown:'미정',
-    trip_open:'열림', trip_closed:'닫힘', trip_cancelled:'취소됨',
-    empty_trips:'출퇴근 없음', empty_trips_hint:'첫 출퇴근을 만들어보세요',
-    loading:'로딩 중...', error_load:'출퇴근을 불러올 수 없습니다', not_found:'출퇴근을 찾을 수 없습니다',
-    invite_title:'초대', invite_hint:'링크를 복사해서 복사 — Avalone에 로그인 후 참석할 수 있습니다.',
-    copied:'링크 복사됨', deleted_confirm:'출퇴근을 삭제할까요?', enter_date:'날짜와 시간을 입력하세요',
-    updated:'출퇴근이 업데이트되었습니다', created:'출퇴근이 생성되었습니다',
-    stat_total:'총 출퇴근', stat_driver:'운전자로', stat_passenger:'동승자로',
-    edit_trip:'출퇴근 편집', organizer:'주최자', seats:'석', error_load_stats:'통계를 불러올 수 없습니다',
-    activity_by_day:'일별 활동', member:'참석자'
-  }
-};
-function T(k){ const l = document.documentElement.lang || 'ru'; return (I18N[l] && I18N[l][k]) || I18N.ru[k] || k; }
+window.I18N = {{ i18n_js() | tojson }};
+function T(k){ const l = document.documentElement.lang || 'ru'; return (window.I18N[l] && window.I18N[l][k]) || window.I18N.ru[k] || k; }
 function applyLang(lang){
   if(lang==='auto') lang = (navigator.language||'').startsWith('en') ? 'en' : ((navigator.language||'').startsWith('ko') ? 'ko' : 'ru');
   document.documentElement.lang = lang;
-  document.querySelectorAll('[data-i]').forEach(el=>{ const k=el.dataset.i; if(I18N[lang][k]) el.textContent=I18N[lang][k]; });
-  document.querySelectorAll('[data-i-ph]').forEach(el=>{ const k=el.dataset.iPh; if(I18N[lang][k]) el.placeholder=I18N[lang][k]; });
+  document.querySelectorAll('[data-i]').forEach(el=>{ const k=el.dataset.i; if(window.I18N[lang][k]) el.textContent=window.I18N[lang][k]; });
+  document.querySelectorAll('[data-i-ph]').forEach(el=>{ const k=el.dataset.iPh; if(window.I18N[lang][k]) el.placeholder=window.I18N[lang][k]; });
 }
 (function(){ const s=localStorage.getItem('avalone_lang')||'auto'; applyLang(s); })();
 </script>
@@ -139,64 +69,64 @@ function applyLang(lang){
 {% block content %}
 <div id="page-trips" class="page active">
   <div class="avalone-page-header">
-    <h1 class="avalone-page-title" data-i="page_trips">Поездки</h1>
-    <button class="avalone-btn avalone-btn-primary" onclick="openTripForm()" data-i="create_trip">+ Создать поездку</button>
+    <h1 class="avalone-page-title" data-i="nav_trips">{{ t('nav_trips') }}</h1>
+    <button class="avalone-btn avalone-btn-primary" onclick="openTripForm()" data-i="btn_create_trip">{{ t('btn_create_trip') }}</button>
   </div>
   <div class="filter-bar">
-    <button class="filter-btn active" data-filter="all" onclick="setFilter('all')" data-i="filter_all">Все</button>
-    <button class="filter-btn" data-filter="upcoming" onclick="setFilter('upcoming')" data-i="filter_upcoming">Предстоящие</button>
-    <button class="filter-btn" data-filter="past" onclick="setFilter('past')" data-i="filter_past">Прошедшие</button>
-    <button class="filter-btn" data-filter="mine" onclick="setFilter('mine')" data-i="filter_mine">Мои</button>
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all')" data-i="label_filter_all">{{ t('label_filter_all') }}</button>
+    <button class="filter-btn" data-filter="upcoming" onclick="setFilter('upcoming')" data-i="label_filter_upcoming">{{ t('label_filter_upcoming') }}</button>
+    <button class="filter-btn" data-filter="past" onclick="setFilter('past')" data-i="label_filter_past">{{ t('label_filter_past') }}</button>
+    <button class="filter-btn" data-filter="mine" onclick="setFilter('mine')" data-i="label_filter_mine">{{ t('label_filter_mine') }}</button>
   </div>
   <div id="trips-list"></div>
 </div>
 
 <div id="page-trip-detail" class="page">
   <div class="avalone-breadcrumbs">
-    <a href="/" data-i="app_work">Работа</a><span>/</span><a href="/#trips" data-i="page_trips">Поездки</a><span>/</span><span id="detail-breadcrumb">...</span>
+    <a href="/" data-i="app_work">{{ t('app_work') }}</a><span>/</span><a href="/#trips" data-i="nav_trips">{{ t('nav_trips') }}</a><span>/</span><span id="detail-breadcrumb">...</span>
   </div>
   <div id="trip-detail"></div>
 </div>
 
 <div id="page-stats" class="page">
   <div class="avalone-page-header">
-    <h1 class="avalone-page-title" data-i="page_stats">Статистика</h1>
-    <a class="avalone-btn avalone-btn-secondary" href="/api/stats/export.csv" download data-i="export_csv">Скачать CSV</a>
+    <h1 class="avalone-page-title" data-i="nav_stats">{{ t('nav_stats') }}</h1>
+    <a class="avalone-btn avalone-btn-secondary" href="/api/stats/export.csv" download data-i="btn_export_csv">{{ t('btn_export_csv') }}</a>
   </div>
   <div class="filter-bar">
-    <button class="filter-btn active" data-period="all" onclick="setPeriod('all')" data-i="period_all">Всё время</button>
-    <button class="filter-btn" data-period="year" onclick="setPeriod('year')" data-i="period_year">Год</button>
-    <button class="filter-btn" data-period="month" onclick="setPeriod('month')" data-i="period_month">Месяц</button>
-    <button class="filter-btn" data-period="week" onclick="setPeriod('week')" data-i="period_week">Неделя</button>
+    <button class="filter-btn active" data-period="all" onclick="setPeriod('all')" data-i="label_period_all">{{ t('label_period_all') }}</button>
+    <button class="filter-btn" data-period="year" onclick="setPeriod('year')" data-i="label_period_year">{{ t('label_period_year') }}</button>
+    <button class="filter-btn" data-period="month" onclick="setPeriod('month')" data-i="label_period_month">{{ t('label_period_month') }}</button>
+    <button class="filter-btn" data-period="week" onclick="setPeriod('week')" data-i="label_period_week">{{ t('label_period_week') }}</button>
   </div>
   <div id="stats-content"></div>
 </div>
 
 <div id="page-notifications" class="page">
   <div class="avalone-page-header">
-    <h1 class="avalone-page-title" data-i="page_notifications">Уведомления</h1>
-    <button class="avalone-btn avalone-btn-secondary" onclick="markAllRead()" data-i="mark_read">Отметить все прочитанными</button>
+    <h1 class="avalone-page-title" data-i="nav_notifications">{{ t('nav_notifications') }}</h1>
+    <button class="avalone-btn avalone-btn-secondary" onclick="markAllRead()" data-i="btn_mark_read">{{ t('btn_mark_read') }}</button>
   </div>
   <div id="notifications-list"></div>
 </div>
 
 <div id="page-settings" class="page">
-  <h1 class="avalone-page-title" data-i="page_settings">Настройки</h1>
+  <h1 class="avalone-page-title" data-i="nav_settings">{{ t('nav_settings') }}</h1>
   <div class="avalone-card">
-    <h3 class="mt-0" data-i="profile">Профиль</h3>
-    <p class="text-muted" data-i="profile_hint">Профиль редактируется на портале Avalone.</p>
-    <a class="avalone-btn avalone-btn-secondary" href="https://avalone.online/profile" data-i="open_profile">Открыть профиль</a>
+    <h3 class="mt-0" data-i="label_profile">{{ t('label_profile') }}</h3>
+    <p class="text-muted" data-i="label_profile_hint">{{ t('label_profile_hint') }}</p>
+    <a class="avalone-btn avalone-btn-secondary" href="https://avalone.online/profile" data-i="btn_open_profile">{{ t('btn_open_profile') }}</a>
   </div>
   <div class="avalone-card">
-    <h3 class="mt-0" data-i="page_notifications">Уведомления</h3>
-    <label class="avalone-form-group" style="display:flex;align-items:center;gap:10px" data-i="notify_invites">
-      <input type="checkbox" id="setting-email-invite" checked> Email о приглашениях
+    <h3 class="mt-0" data-i="nav_notifications">{{ t('nav_notifications') }}</h3>
+    <label class="avalone-form-group" style="display:flex;align-items:center;gap:10px" data-i="label_notify_invites">
+      <input type="checkbox" id="setting-email-invite" checked> {{ t('label_notify_invites') }}
     </label>
-    <label class="avalone-form-group" style="display:flex;align-items:center;gap:10px" data-i="notify_roles">
-      <input type="checkbox" id="setting-email-role" checked> Email об изменении роли
+    <label class="avalone-form-group" style="display:flex;align-items:center;gap:10px" data-i="label_notify_roles">
+      <input type="checkbox" id="setting-email-role" checked> {{ t('label_notify_roles') }}
     </label>
-    <label class="avalone-form-group" style="display:flex;align-items:center;gap:10px" data-i="notify_reminders">
-      <input type="checkbox" id="setting-email-reminder" checked> Напоминания о поездках
+    <label class="avalone-form-group" style="display:flex;align-items:center;gap:10px" data-i="label_notify_reminders">
+      <input type="checkbox" id="setting-email-reminder" checked> {{ t('label_notify_reminders') }}
     </label>
   </div>
 </div>
@@ -208,32 +138,32 @@ function applyLang(lang){
 <div id="trip-modal" class="overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
   <div class="sheet" style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;margin:16px">
     <div class="avalone-page-header" style="margin-bottom:16px">
-      <h3 class="mt-0 mb-0" id="trip-modal-title" data-i="create_trip">Создать поездку</h3>
+      <h3 class="mt-0 mb-0" id="trip-modal-title" data-i="btn_create_trip">{{ t('btn_create_trip') }}</h3>
       <button class="avalone-icon-btn" onclick="closeTripModal()">×</button>
     </div>
     <input type="hidden" id="trip-modal-id">
     <div class="avalone-form-group">
-      <label class="avalone-label" data-i="direction">Направление</label>
+      <label class="avalone-label" data-i="label_direction">{{ t('label_direction') }}</label>
       <div class="avalone-radio-group">
-        <label class="avalone-radio active" id="radio-to-work" data-i="to_work"><input type="radio" name="direction" value="to_work" checked style="display:none"> На работу</label>
-        <label class="avalone-radio" id="radio-from-work" data-i="from_work"><input type="radio" name="direction" value="from_work" style="display:none"> С работы</label>
+        <label class="avalone-radio active" id="radio-to-work" data-i="label_to_work"><input type="radio" name="direction" value="to_work" checked style="display:none"> {{ t('label_to_work') }}</label>
+        <label class="avalone-radio" id="radio-from-work" data-i="label_from_work"><input type="radio" name="direction" value="from_work" style="display:none"> {{ t('label_from_work') }}</label>
       </div>
     </div>
     <div class="avalone-form-group">
-      <label class="avalone-label" for="trip-modal-date" data-i="date">Дата</label>
+      <label class="avalone-label" for="trip-modal-date" data-i="label_date">{{ t('label_date') }}</label>
       <input class="avalone-input" type="date" id="trip-modal-date">
     </div>
     <div class="avalone-form-group">
-      <label class="avalone-label" for="trip-modal-time" data-i="time">Время</label>
+      <label class="avalone-label" for="trip-modal-time" data-i="label_time">{{ t('label_time') }}</label>
       <input class="avalone-input" type="time" id="trip-modal-time">
     </div>
     <div class="avalone-form-group">
-      <label class="avalone-label" for="trip-modal-comment" data-i="comment">Комментарий</label>
+      <label class="avalone-label" for="trip-modal-comment" data-i="label_comment">{{ t('label_comment') }}</label>
       <textarea class="avalone-textarea" id="trip-modal-comment" rows="2"></textarea>
     </div>
     <div class="row" style="justify-content:flex-end">
-      <button class="avalone-btn avalone-btn-secondary" onclick="closeTripModal()" data-i="cancel">Отмена</button>
-      <button class="avalone-btn avalone-btn-primary" onclick="saveTrip()" data-i="save">Сохранить</button>
+      <button class="avalone-btn avalone-btn-secondary" onclick="closeTripModal()" data-i="btn_cancel">{{ t('btn_cancel') }}</button>
+      <button class="avalone-btn avalone-btn-primary" onclick="saveTrip()" data-i="btn_save">{{ t('btn_save') }}</button>
     </div>
   </div>
 </div>
@@ -242,21 +172,21 @@ function applyLang(lang){
 <div id="invite-modal" class="overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
   <div class="sheet" style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;margin:16px">
     <div class="avalone-page-header" style="margin-bottom:16px">
-      <h3 class="mt-0 mb-0" data-i="invite_title">Пригласить</h3>
+      <h3 class="mt-0 mb-0" data-i="label_invite_title">{{ t('label_invite_title') }}</h3>
       <button class="avalone-icon-btn" onclick="closeInviteModal()">×</button>
     </div>
-    <p class="text-muted" style="font-size:13px" data-i="invite_hint">Отправьте ссылку — человек сможет присоединиться после входа в Avalone.</p>
+    <p class="text-muted" style="font-size:13px" data-i="label_invite_hint">{{ t('label_invite_hint') }}</p>
     <input class="avalone-input" type="text" id="invite-link" readonly onclick="this.select()">
     <div class="row" style="justify-content:flex-end;margin-top:12px">
-      <button class="avalone-btn avalone-btn-primary" onclick="copyInvite()" data-i="copy">Копировать</button>
+      <button class="avalone-btn avalone-btn-primary" onclick="copyInvite()" data-i="btn_copy">{{ t('btn_copy') }}</button>
     </div>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const dirLabels = {to_work:T('to_work'),from_work:T('from_work')};
-const roleLabels = {driver:T('driver'),passenger:T('passenger'),not_going:T('not_going'),unknown:T('unknown')};
+const dirLabels = {to_work:T('label_to_work'),from_work:T('label_from_work')};
+const roleLabels = {driver:T('label_driver'),passenger:T('label_passenger'),not_going:T('label_not_going'),unknown:T('label_unknown')};
 let currentFilter='all', currentPeriod='all', currentTripId=null;
 
 function fmtDate(d){ const [y,m,day]=d.split('-'); return `${day}.${m}.${y}`; }
@@ -288,17 +218,17 @@ function route(){
 
 async function loadTrips(){
   const list=$('trips-list');
-  list.innerHTML=`<div class="empty-state"><div>${T('loading')}</div></div>`;
+  list.innerHTML=`<div class="empty-state"><div>${T('label_loading')}</div></div>`;
   try{
     const params = new URLSearchParams(); params.set('filter_status', currentFilter==='mine'?'all':currentFilter); if(currentFilter==='mine') params.set('only_mine','true');
     const {trips}=await api('/trips?'+params.toString());
     renderTrips(trips);
-  }catch(e){ list.innerHTML=`<div class="empty-state">${T('error_load')}</div>`; }
+  }catch(e){ list.innerHTML=`<div class="empty-state">${T('error_load_trips')}</div>`; }
 }
 
 function renderTrips(trips){
   const list=$('trips-list');
-  if(!trips.length){ list.innerHTML=`<div class="empty-state"><div class="empty-state__icon">🚐</div><div>${T('empty_trips')}</div><p>${T('empty_trips_hint')}</p></div>`; return; }
+  if(!trips.length){ list.innerHTML=`<div class="empty-state"><div class="empty-state__icon">🚐</div><div>${T('label_empty_trips')}</div><p>${T('label_empty_trips_hint')}</p></div>`; return; }
   list.innerHTML=trips.map(t=>{
     const drivers=t.members.filter(m=>m.role==='driver');
     const passengers=t.members.filter(m=>m.role==='passenger');
@@ -308,19 +238,19 @@ function renderTrips(trips){
       <div class="trip-card__head">
         <div>
           <h3 class="trip-card__title">${escapeHtml(dirLabels[t.direction])} · ${escapeHtml(fmtDate(t.trip_date))}</h3>
-          <div class="trip-card__meta">${escapeHtml(t.trip_time)} · ${t.members.length} участников</div>
+          <div class="trip-card__meta">${escapeHtml(t.trip_time)} · ${t.members.length} ${T('label_members_count')}</div>
         </div>
-        <span class="avalone-badge ${t.status==='open'?'avalone-badge-green':(t.status==='closed'?'avalone-badge-gray':'avalone-badge-red')}">${t.status==='open'?T('trip_open'):(t.status==='closed'?T('trip_closed'):T('trip_cancelled'))}</span>
+        <span class="avalone-badge ${t.status==='open'?'avalone-badge-green':(t.status==='closed'?'avalone-badge-gray':'avalone-badge-red')}">${t.status==='open'?T('label_trip_open'):(t.status==='closed'?T('label_trip_closed'):T('label_trip_cancelled'))}</span>
       </div>
       <div class="trip-card__stats">
-        ${T('driver')}: ${drivers.length? drivers.map(d=>nameOf(d.login)).join(', '):'—'} ·
-        ${T('passenger')}: ${passengers.length} ·
-        ${T('not_going')}: ${notGoing.length}
+        ${T('label_driver')}: ${drivers.length? drivers.map(d=>nameOf(d.login)).join(', '):'—'} ·
+        ${T('label_passenger')}: ${passengers.length} ·
+        ${T('label_not_going')}: ${notGoing.length}
       </div>
       ${t.comment? `<p class="text-muted" style="font-size:13px;margin-bottom:10px">${escapeHtml(t.comment)}</p>`:''}
       <div class="trip-card__actions">
-        <button class="avalone-btn avalone-btn-sm avalone-btn-secondary" onclick="location.hash='trip-${t.id}'">${T('open')}</button>
-        ${isClosed?'':`<button class="avalone-btn avalone-btn-sm avalone-btn-secondary" onclick="openInvite('${t.invite_code}')">${T('invite')}</button>`}
+        <button class="avalone-btn avalone-btn-sm avalone-btn-secondary" onclick="location.hash='trip-${t.id}'">${T('btn_open')}</button>
+        ${isClosed?'':`<button class="avalone-btn avalone-btn-sm avalone-btn-secondary" onclick="openInvite('${t.invite_code}')">${T('btn_invite')}</button>`}
       </div>
     </div>`;
   }).join('');
@@ -336,12 +266,12 @@ function setFilter(f){
 
 async function loadTripDetail(){
   if(!currentTripId) return;
-  const box=$('trip-detail'); box.innerHTML='<div class="empty-state">Загрузка...</div>';
+  const box=$('trip-detail'); box.innerHTML=`<div class="empty-state">${T('label_loading')}</div>`;
   try{
     const {trip}=await api(`/trips/${currentTripId}`);
     $('detail-breadcrumb').textContent=dirLabels[trip.direction]+' '+fmtDate(trip.trip_date);
     renderTripDetail(trip);
-  }catch(e){ box.innerHTML=`<div class="empty-state">${T('not_found')}</div>`; }
+  }catch(e){ box.innerHTML=`<div class="empty-state">${T('error_not_found_trip')}</div>`; }
 }
 
 function renderTripDetail(t){
@@ -351,20 +281,20 @@ function renderTripDetail(t){
     <div class="trip-card__head">
       <div>
         <h2 class="avalon-page-title" style="font-size:22px;margin:0">${escapeHtml(dirLabels[t.direction])} · ${escapeHtml(fmtDate(t.trip_date))}</h2>
-        <div class="trip-card__meta">${escapeHtml(t.trip_time)} · ${T('organizer')}: ${nameOf(t.members.find(m=>m.tenant_id===t.tenant_id)?.login||'')}</div>
+        <div class="trip-card__meta">${escapeHtml(t.trip_time)} · ${T('label_organizer')}: ${nameOf(t.members.find(m=>m.tenant_id===t.tenant_id)?.login||'')}</div>
       </div>
-      <span class="avalone-badge ${t.status==='open'?'avalone-badge-green':(t.status==='closed'?'avalone-badge-gray':'avalone-badge-red')}">${t.status==='open'?T('trip_open'):(t.status==='closed'?T('trip_closed'):T('trip_cancelled'))}</span>
+      <span class="avalone-badge ${t.status==='open'?'avalone-badge-green':(t.status==='closed'?'avalone-badge-gray':'avalone-badge-red')}">${t.status==='open'?T('label_trip_open'):(t.status==='closed'?T('label_trip_closed'):T('label_trip_cancelled'))}</span>
     </div>
     ${t.comment?`<p class="text-muted">${escapeHtml(t.comment)}</p>`:''}
     <div class="trip-card__actions">
-      ${isClosed?'':`<button class="avalone-btn avalone-btn-secondary" onclick="openInvite('${t.invite_code}')">${T('invite')}</button>`}
-      ${isCreator?`<button class="avalone-btn avalone-btn-secondary" onclick="openTripFormEdit(${t.id})">${T('edit')}</button>`:''}
-      ${isCreator && !isClosed?`<button class="avalone-btn avalone-btn-secondary" onclick="closeTrip(${t.id})">${T('close')}</button>`:''}
-      ${isCreator && isClosed?`<button class="avalone-btn avalone-btn-secondary" onclick="reopenTrip(${t.id})">${T('reopen')}</button>`:''}
-      ${isCreator?`<button class="avalone-btn avalone-btn-danger" onclick="deleteTrip(${t.id})">${T('delete')}</button>`:''}
+      ${isClosed?'':`<button class="avalone-btn avalone-btn-secondary" onclick="openInvite('${t.invite_code}')">${T('btn_invite')}</button>`}
+      ${isCreator?`<button class="avalone-btn avalone-btn-secondary" onclick="openTripFormEdit(${t.id})">${T('btn_edit')}</button>`:''}
+      ${isCreator && !isClosed?`<button class="avalone-btn avalone-btn-secondary" onclick="closeTrip(${t.id})">${T('btn_close')}</button>`:''}
+      ${isCreator && isClosed?`<button class="avalone-btn avalone-btn-secondary" onclick="reopenTrip(${t.id})">${T('btn_reopen')}</button>`:''}
+      ${isCreator?`<button class="avalone-btn avalone-btn-danger" onclick="deleteTrip(${t.id})">${T('btn_delete')}</button>`:''}
     </div>
   </div>
-  <h3 style="margin:20px 0 10px" data-i="members">Участники</h3>
+  <h3 style="margin:20px 0 10px" data-i="label_members">${T('label_members')}</h3>
   <div class="avalone-card">${t.members.map(m=>renderMemberRow(t.id,m)).join('')}</div>`;
   $('trip-detail').innerHTML=html;
 }
@@ -373,12 +303,12 @@ function renderMemberRow(tripId,m){
   return `<div class="member-row">
     <div>
       <div class="member-name">${nameOf(m.login)}</div>
-      <div class="member-role">${roleLabels[m.role]}${m.role==='driver' && m.seats? ` · ${m.seats} ${T('seats')}` : ''}</div>
+      <div class="member-role">${roleLabels[m.role]}${m.role==='driver' && m.seats? ` · ${m.seats} ${T('label_seats')}` : ''}</div>
     </div>
     <div class="role-btns">
-      <button class="role-btn ${m.role==='driver'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'driver')">${T('driver')}</button>
-      <button class="role-btn ${m.role==='passenger'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'passenger')">${T('passenger')}</button>
-      <button class="role-btn danger ${m.role==='not_going'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'not_going')">${T('not_going')}</button>
+      <button class="role-btn ${m.role==='driver'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'driver')">${T('label_driver')}</button>
+      <button class="role-btn ${m.role==='passenger'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'passenger')">${T('label_passenger')}</button>
+      <button class="role-btn danger ${m.role==='not_going'?'active':''}" onclick="setRole(${tripId},${m.tenant_id},'not_going')">${T('label_not_going')}</button>
     </div>
   </div>`;
 }
@@ -390,7 +320,7 @@ async function setRole(tripId,memberTid,role){
 
 function openTripForm(){
   currentTripId=null;
-  $('trip-modal-title').textContent=T('create_trip');
+  $('trip-modal-title').textContent=T('btn_create_trip');
   $('trip-modal-id').value='';
   $('trip-modal-date').value=new Date().toISOString().slice(0,10);
   $('trip-modal-time').value='08:00';
@@ -402,7 +332,7 @@ function openTripForm(){
 async function openTripFormEdit(id){
   currentTripId=id;
   const {trip}=await api(`/trips/${id}`);
-  $('trip-modal-title').textContent=T('edit_trip');
+  $('trip-modal-title').textContent=T('title_edit_trip');
   $('trip-modal-id').value=id;
   $('trip-modal-date').value=trip.trip_date;
   $('trip-modal-time').value=trip.trip_time;
@@ -426,32 +356,32 @@ async function saveTrip(){
   const date=$('trip-modal-date').value;
   const time=$('trip-modal-time').value;
   const comment=$('trip-modal-comment').value;
-  if(!date||!time){ toast(T('enter_date')); return; }
+  if(!date||!time){ toast(T('error_enter_date')); return; }
   const body={direction,date,time,comment};
   if(currentTripId){
     await api(`/trips/${currentTripId}`, {method:'PUT', body:JSON.stringify(body)});
-    toast(T('updated'));
+    toast(T('label_trip_updated'));
     closeTripModal(); loadTripDetail();
   } else {
     await api('/trips', {method:'POST', body:JSON.stringify(body)});
-    toast(T('created'));
+    toast(T('label_trip_created'));
     closeTripModal(); loadTrips();
   }
 }
 
 async function closeTrip(id){ await api(`/trips/${id}/close`, {method:'POST'}); loadTripDetail(); }
 async function reopenTrip(id){ await api(`/trips/${id}/reopen`, {method:'POST'}); loadTripDetail(); }
-async function deleteTrip(id){ if(!confirm(T('deleted_confirm'))) return; await api(`/trips/${id}`, {method:'DELETE'}); location.hash='trips'; loadTrips(); }
+async function deleteTrip(id){ if(!confirm(T('confirm_delete_trip'))) return; await api(`/trips/${id}`, {method:'DELETE'}); location.hash='trips'; loadTrips(); }
 
 function openInvite(code){
   $('invite-link').value=`${location.origin}/join/${code}`;
   $('invite-modal').style.display='flex';
 }
 function closeInviteModal(){ $('invite-modal').style.display='none'; }
-function copyInvite(){ navigator.clipboard.writeText($('invite-link').value).then(()=>toast(T('copied'))); }
+function copyInvite(){ navigator.clipboard.writeText($('invite-link').value).then(()=>toast(T('label_copied'))); }
 
 async function loadStats(){
-  const box=$('stats-content'); box.innerHTML=`<div class="empty-state">${T('loading')}</div>`;
+  const box=$('stats-content'); box.innerHTML=`<div class="empty-state">${T('label_loading')}</div>`;
   try{
     const {stats}=await api(`/stats?period=${currentPeriod}`);
     renderStats(stats);
@@ -460,15 +390,15 @@ async function loadStats(){
 
 function renderStats(s){
   const html=`<div class="stat-grid">
-    <div class="avalon-card stat-card"><div class="stat-value">${s.total}</div><div class="stat-label">${T('stat_total')}</div></div>
-    <div class="avalon-card stat-card"><div class="stat-value">${s.as_driver}</div><div class="stat-label">${T('stat_driver')}</div></div>
-    <div class="avalon-card stat-card"><div class="stat-value">${s.as_passenger}</div><div class="stat-label">${T('stat_passenger')}</div></div>
+    <div class="avalon-card stat-card"><div class="stat-value">${s.total}</div><div class="stat-label">${T('label_stat_total')}</div></div>
+    <div class="avalon-card stat-card"><div class="stat-value">${s.as_driver}</div><div class="stat-label">${T('label_stat_driver')}</div></div>
+    <div class="avalon-card stat-card"><div class="stat-value">${s.as_passenger}</div><div class="stat-label">${T('label_stat_passenger')}</div></div>
   </div>
-  <div class="avalone-card"><h3 class="mt-0" data-i="activity_by_day">Активность по дням</h3>${renderChart(s.by_day)}</div>
+  <div class="avalone-card"><h3 class="mt-0" data-i="label_activity_by_day">${T('label_activity_by_day')}</h3>${renderChart(s.by_day)}</div>
   <div class="avalone-card">
-    <h3 class="mt-0" data-i="members">Участники</h3>
+    <h3 class="mt-0" data-i="label_members">${T('label_members')}</h3>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
-      <tr style="border-bottom:1px solid var(--line)"><th style="text-align:left;padding:8px" data-i="member">Участник</th><th style="text-align:center;padding:8px" data-i="driver">Водитель</th><th style="text-align:center;padding:8px" data-i="passenger">Пассажир</th></tr>
+      <tr style="border-bottom:1px solid var(--line)"><th style="text-align:left;padding:8px" data-i="label_member">${T('label_member')}</th><th style="text-align:center;padding:8px" data-i="label_driver">${T('label_driver')}</th><th style="text-align:center;padding:8px" data-i="label_passenger">${T('label_passenger')}</th></tr>
       ${s.members_table.map(r=>`<tr style="border-bottom:1px solid var(--line)"><td style="padding:8px">${nameOf(r.login)}</td><td style="text-align:center;padding:8px">${r.driver_count}</td><td style="text-align:center;padding:8px">${r.passenger_count}</td></tr>`).join('')}
     </table>
   </div>`;
@@ -476,7 +406,7 @@ function renderStats(s){
 }
 
 function renderChart(rows){
-  if(!rows.length) return '<p class="text-muted">Нет данных</p>';
+  if(!rows.length) return `<p class="text-muted">${T('label_no_data')}</p>`;
   const max=Math.max(...rows.map(r=>r.count),1);
   return `<div class="chart-bar">${rows.map(r=>`<div class="chart-bar__item" style="height:${Math.max(4, (r.count/max)*100)}%"><span>${r.count}</span></div>`).join('')}</div>`;
 }
@@ -484,16 +414,16 @@ function renderChart(rows){
 function setPeriod(p){ currentPeriod=p; document.querySelectorAll('#page-stats .filter-btn').forEach(b=>b.classList.toggle('active', b.dataset.period===p)); loadStats(); }
 
 async function loadNotifications(){
-  const box=$('notifications-list'); box.innerHTML='<div class="empty-state">Загрузка...</div>';
+  const box=$('notifications-list'); box.innerHTML=`<div class="empty-state">${T('label_loading')}</div>`;
   try{
     const {notifications}=await api('/notifications');
     renderNotifications(notifications);
-  }catch(e){ box.innerHTML='<div class="empty-state">Не удалось загрузить уведомления</div>'; }
+  }catch(e){ box.innerHTML=`<div class="empty-state">${T('error_load_notifications')}</div>`; }
 }
 
 function renderNotifications(list){
   const box=$('notifications-list');
-  if(!list.length){ box.innerHTML='<div class="empty-state">Нет уведомлений</div>'; return; }
+  if(!list.length){ box.innerHTML=`<div class="empty-state">${T('label_empty_notifications')}</div>`; return; }
   box.innerHTML=list.map(n=>`<div class="notif-item ${n.is_read?'':'unread'}" onclick="markRead(${n.id})">
     <div class="notif-icon">${n.type==='invite'?'📩':(n.type==='role'?'🔄':'🔔')}</div>
     <div class="notif-body"><div class="notif-title">${escapeHtml(n.title)}</div><div class="notif-text">${escapeHtml(n.body)}</div><div class="notif-time">${fmtDate(n.created_at.slice(0,10))}</div></div>
