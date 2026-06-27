@@ -5,7 +5,10 @@ import logging
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from routa.core import glossary, notify, security
+from avalone_core.device_service import DeviceService
+from avalone_core.language_service import LanguageService
+from avalone_core.referral_service import ReferralService
+from routa.core import glossary, notify, security, tenant
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -61,3 +64,60 @@ async def verify_email(request: Request, payload: dict):
     if tenant.check_verify_code(tid, code):
         return {"verified": True}
     return JSONResponse({"error": "error_invalid_code"}, status_code=400)
+
+
+@router.post("/lang")
+async def set_language(request: Request):
+    """Persist language preference for the current user and cookie."""
+    body = await request.json()
+    service = LanguageService()
+    resolved = service._normalize(str(body.get("lang", "auto")).strip().lower())
+    tid = tenant.require_current()
+    service.set_user_language(tid, resolved)
+    response = JSONResponse({"ok": True, "lang": resolved})
+    response.set_cookie(
+        "avalone_lang",
+        resolved,
+        max_age=60 * 60 * 24 * 365,
+        path="/",
+        samesite="lax",
+        secure=True,
+    )
+    return response
+
+
+@router.get("/referral/code")
+async def referral_code():
+    tid = tenant.require_current()
+    code = ReferralService().get_or_create_code(tid)
+    return {"code": code, "url": f"https://avalone.online?ref={code}"}
+
+
+@router.get("/referral/stats")
+async def referral_stats():
+    tid = tenant.require_current()
+    return ReferralService().stats(tid)
+
+
+@router.post("/heartbeat")
+async def heartbeat(request: Request):
+    tid = tenant.require_current()
+    body = await request.json()
+    device_id = str(body.get("device_id", "")).strip() or None
+    screen = str(body.get("screen", "")).strip()
+    platform = str(body.get("platform", "")).strip()
+    seconds = body.get("seconds", 5)
+    try:
+        seconds = int(seconds)
+    except (TypeError, ValueError):
+        seconds = 5
+    result = DeviceService().heartbeat(
+        tid,
+        device_id,
+        request.headers.get("user-agent", ""),
+        screen,
+        platform,
+        _client_ip(request),
+        seconds,
+    )
+    return result

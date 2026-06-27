@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
 from avalone_core import glossary_db as glossary
+from avalone_core.language_service import LanguageService
 from avalone_core.registry import AvaloneRegistry
 from avalone_core.ui import Shell, build_id as ui_build_id
 import avalone_core.ui
@@ -150,16 +151,19 @@ def _work_app_nav(active_id: str = "trips", lang: str = "ru"):
 
 
 def _shell_context_for(request: Request, user, current_app: str = "work", active_id: str = "trips"):
-    branches = AvaloneRegistry.for_shell("ru")
+    lang = LanguageService(auth_service=external_auth).detect(request)
+    branches = AvaloneRegistry.for_shell(lang)
     shell = Shell(
         current_app=current_app,
         user=user,
         branches=branches,
-        app_nav=_work_app_nav(active_id),
+        app_nav=_work_app_nav(active_id, lang),
+        lang=lang,
     )
     return {
         "build_id": BUILD_ID,
         "user": user,
+        "lang": lang,
         "shell_html": shell.render(templates.env, request),
     }
 

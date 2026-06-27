@@ -75,6 +75,8 @@ class UserRepository(Repository):
             "verify_sent": "TEXT DEFAULT ''",
             "reset_token": "TEXT DEFAULT ''",
             "reset_expires": "TEXT DEFAULT ''",
+            "referral_code": "TEXT",
+            "referred_by": "INTEGER REFERENCES users(id) ON DELETE SET NULL",
         }
         for col, dtype in additions.items():
             if col not in cols:
@@ -82,6 +84,12 @@ class UserRepository(Repository):
                     con.execute(f"ALTER TABLE users ADD COLUMN {col} {dtype}")
                 except sqlite3.OperationalError:
                     pass
+        try:
+            con.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)"
+            )
+        except sqlite3.OperationalError:
+            pass
 
     # --- пароли (PBKDF2, stdlib) ---
     def hash_password(self, password: str) -> str:
