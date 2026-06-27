@@ -141,13 +141,13 @@ def _no_cache(resp):
     return resp
 
 
-def _work_app_nav(active_id: str = "trips", lang: str = "ru"):
+def _app_nav(active_id: str = "trips", lang: str = "ru"):
     entries = AvaloneRegistry.app_nav("work", lang)
     for e in entries:
         e["id"] = e["href"].lstrip("/#")
         e["url"] = e.pop("href")
         e["active"] = e["id"] == active_id
-    return [{"label": glossary.t("app_work", lang), "entries": entries}]
+    return [{"label": glossary.t("brand", lang), "entries": entries}]
 
 
 def _shell_context_for(request: Request, user, current_app: str = "work", active_id: str = "trips"):
@@ -157,7 +157,7 @@ def _shell_context_for(request: Request, user, current_app: str = "work", active
         current_app=current_app,
         user=user,
         branches=branches,
-        app_nav=_work_app_nav(active_id, lang),
+        app_nav=_app_nav(active_id, lang),
         lang=lang,
     )
     return {

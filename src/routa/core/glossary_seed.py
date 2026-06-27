@@ -1,7 +1,7 @@
 """Routa glossary seed.
 
 Single source of truth for all Routa-specific user-facing strings.
-Portal/shared keys (app_work, nav_*, manifest_name, error_unauthorized, etc.)
+Portal/shared keys (brand, nav_*, manifest_name, error_unauthorized, etc.)
 live in avalone_core.glossary_db and are NOT duplicated here.
 """
 
